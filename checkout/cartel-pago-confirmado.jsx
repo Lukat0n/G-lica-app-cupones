@@ -13,27 +13,28 @@ const LEXEND = "Lexend, 'Zalando Sans', Arial, Helvetica, sans-serif";
 const ZALANDO = "'Zalando Sans', Arial, Helvetica, sans-serif";
 
 function Cartel(c) {
-  // Misma estética que la vista previa del panel y el mail.
+  // Versión compacta: poco espacio vertical, pensada para el celu.
+  const t = { margin: "0", padding: "0" };
   return (
-    <Box direction="col" width="100%" padding="16px" gap="8px" borderRadius="16px" background={HIELO}
-      style={{ border: `2px solid ${CELESTE}`, marginTop: "8px", marginBottom: "8px", maxWidth: "560px" }}>
-      <Text color={CELESTE} style={{ fontFamily: LEXEND, fontSize: "11px", fontWeight: "700", letterSpacing: "1.4px" }}>
+    <Box direction="col" width="100%" padding="12px 14px" gap="4px" borderRadius="14px" background={HIELO}
+      style={{ border: `2px solid ${CELESTE}`, marginTop: "6px", marginBottom: "6px", maxWidth: "560px" }}>
+      <Text color={CELESTE} style={{ ...t, fontFamily: LEXEND, fontSize: "10px", fontWeight: "700", letterSpacing: "1.3px" }}>
         {c.etiqueta}
       </Text>
-      <Text color={TINTA} style={{ fontFamily: LEXEND, fontSize: "22px", fontWeight: "700", lineHeight: "1.2" }}>
+      <Text color={TINTA} style={{ ...t, fontFamily: LEXEND, fontSize: "18px", fontWeight: "700", lineHeight: "1.2" }}>
         {c.titulo}
       </Text>
-      <Text color={GRIS} style={{ fontFamily: ZALANDO, fontSize: "15px", lineHeight: "1.45" }}>{c.bajada}</Text>
+      <Text color={GRIS} style={{ ...t, fontFamily: ZALANDO, fontSize: "13px", lineHeight: "1.35" }}>{c.bajada}</Text>
       <Link href={c.link} style={{
-        display: "block", width: "100%", textAlign: "center", textDecoration: "none",
-        background: CELESTE, color: "#FFFFFF", borderRadius: "999px", padding: "13px 16px",
-        fontFamily: LEXEND, fontSize: "16px", fontWeight: "600", border: "none",
+        display: "block", width: "100%", textAlign: "center", textDecoration: "none", marginTop: "6px",
+        background: CELESTE, color: "#FFFFFF", borderRadius: "999px", padding: "9px 14px",
+        fontFamily: LEXEND, fontSize: "14px", fontWeight: "600", border: "none",
       }}>
         {c.boton}
       </Link>
-      <Box direction="row" padding="10px" borderRadius="12px" background="#FFFFFF" alignItems="center"
-        justifyContent="center">
-        <Text showCopyButton color={TINTA} style={{ fontFamily: ZALANDO, fontSize: "13px", textAlign: "center" }}>
+      <Box direction="row" padding="5px 8px" borderRadius="10px" background="#FFFFFF" alignItems="center"
+        justifyContent="center" style={{ marginTop: "2px" }}>
+        <Text showCopyButton color={TINTA} style={{ ...t, fontFamily: ZALANDO, fontSize: "11px", textAlign: "center" }}>
           {c.codigo_linea}
         </Text>
       </Box>
