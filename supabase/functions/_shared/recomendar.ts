@@ -10,6 +10,7 @@ export type Producto = {
   imagen: string | null;
   precio: number;        // precio actual (promocional si hay)
   disponible: boolean;
+  variant_id: number | null; // solo si tiene UNA variante (talle único) -> se puede armar el checkout directo
 };
 
 export type ConfigReco = {
@@ -42,6 +43,7 @@ export function aProducto(p: any, nombres: Record<string, string> = {}): Product
     imagen: img?.src ?? null,
     precio: precios.length ? Math.min(...precios) : 0,
     disponible,
+    variant_id: variantes.length === 1 ? Number(variantes[0].id) : null,
   };
 }
 

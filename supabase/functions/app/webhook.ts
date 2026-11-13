@@ -1,7 +1,8 @@
 // Recibe los webhooks de Tiendanube. Responde 200 al instante (Tiendanube corta a los 3 s)
 // y procesa en segundo plano.
 import { db, firmaValida, TN } from "../_shared/tiendanube.ts";
-import { anularPorCancelacion, crearCuponParaOrden, registrarUso } from "../_shared/cupones.ts";
+import { anularPorCancelacion, crearCuponParaOrden, registrarPagoBorrador, registrarUso } from "../_shared/cupones.ts";
+import { borrarBorradores } from "./comprar.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
@@ -11,8 +12,11 @@ async function procesar(ev: { store_id: number; event: string; id: number }) {
     case "order/paid": {
       const tn = await TN.para(storeId);
       const order = await tn.orden(ev.id);
-      await registrarUso(storeId, order);       // ¿usó un cupón nuestro? => no más recordatorios
-      await crearCuponParaOrden(storeId, ev.id); // cupón nuevo para esta compra
+      // ¿usó un saldo nuestro? => no más recordatorios, y se borran los checkouts armados que queden
+      for (const id of await registrarUso(storeId, order)) await borrarBorradores(storeId, id).catch(() => {});
+      // ¿pagó un checkout armado con "Comprarla con mi saldo"? => ese saldo queda usado
+      await registrarPagoBorrador(storeId, order);
+      await crearCuponParaOrden(storeId, ev.id); // saldo nuevo por esta compra
       break;
     }
     case "order/cancelled":

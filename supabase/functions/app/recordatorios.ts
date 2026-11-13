@@ -5,6 +5,7 @@
 import { db, TN } from "../_shared/tiendanube.ts";
 import { cargarConfig, crearCuponParaOrden } from "../_shared/cupones.ts";
 import { avisar } from "../_shared/avisos.ts";
+import { borrarBorradores } from "./comprar.ts";
 import { hoyAR, recordatoriosPendientes } from "../_shared/logic.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
@@ -43,6 +44,16 @@ async function correr() {
     // 2) Vencidos
     await s.from("cupones").update({ estado: "vencido" })
       .eq("store_id", storeId).eq("estado", "activo").lt("vence_el", hoy);
+
+    // Limpieza: checkouts armados que nadie pagó (más de 3 días, o de saldos que ya no están activos)
+    const { data: viejos } = await s.from("borradores").select("cupon_id, creado_en, cupones!inner(estado,store_id)")
+      .eq("estado", "pendiente").eq("cupones.store_id", storeId);
+    for (const b of viejos ?? []) {
+      const c: any = (b as any).cupones;
+      if (c?.estado !== "activo" || Date.now() - Date.parse(b.creado_en) > 3 * 86_400_000) {
+        await borrarBorradores(storeId, b.cupon_id).catch(() => {});
+      }
+    }
 
     // 3) Recordatorios
     const { data: activos } = await s.from("cupones").select("*, avisos(tipo,canal)")

@@ -154,12 +154,13 @@ async function emitir(
 }
 
 /** Si la orden usó un cupón nuestro, lo marcamos como usado (corta los recordatorios). */
-export async function registrarUso(storeId: number, order: any) {
+export async function registrarUso(storeId: number, order: any): Promise<string[]> {
   const codigos = codigosUsados(order);
-  if (!codigos.length) return;
-  await db().from("cupones")
+  if (!codigos.length) return [];
+  const { data } = await db().from("cupones")
     .update({ estado: "usado", usado_en: new Date().toISOString(), usado_en_order_id: order.id })
-    .eq("store_id", storeId).in("codigo", codigos).eq("estado", "activo");
+    .eq("store_id", storeId).in("codigo", codigos).eq("estado", "activo").select("id");
+  return (data ?? []).map((r) => r.id);
 }
 
 /** Orden cancelada => su cupón (si no se usó) se desactiva. Evita "compro, me llevo el cupón, cancelo". */
@@ -173,4 +174,32 @@ export async function anularPorCancelacion(storeId: number, orderId: number) {
     code: data.codigo, type: "absolute", value: Number(data.monto_cupon).toFixed(2), valid: false,
   });
   await s.from("cupones").update({ estado: "anulado" }).eq("id", data.id);
+}
+
+/**
+ * ¿Esta orden pagada es un pedido armado con "Comprarla con mi saldo"?
+ * Entonces el saldo ya se usó: se marca usado y se desactiva el cupón en Tiendanube
+ * (el descuento del borrador no pasa por el cupón, así que hay que cerrarlo a mano).
+ */
+export async function registrarPagoBorrador(storeId: number, order: any) {
+  const s = db();
+  let { data: b } = await s.from("borradores").select("*").eq("draft_id", order.id).maybeSingle();
+  if (!b) {
+    const m = String(order.note ?? order.owner_note ?? "").match(/Saldo GELICA ([A-Z0-9]+)/);
+    if (!m) return;
+    const { data: c } = await s.from("cupones").select("id").eq("codigo", m[1]).maybeSingle();
+    if (!c) return;
+    b = { id: null, cupon_id: c.id } as any;
+  }
+  const { data: cupon } = await s.from("cupones").select("*").eq("id", b!.cupon_id).single();
+  if (b!.id) await s.from("borradores").update({ estado: "pagado" }).eq("id", b!.id);
+  if (!cupon || cupon.estado !== "activo") return;
+  await s.from("cupones").update({ estado: "usado", usado_en: new Date().toISOString(), usado_en_order_id: order.id })
+    .eq("id", cupon.id);
+  if (cupon.tn_coupon_id) {
+    const tn = await TN.para(storeId);
+    await tn.editarCupon(cupon.tn_coupon_id, {
+      code: cupon.codigo, type: "absolute", value: Number(cupon.monto_cupon).toFixed(2), valid: false,
+    }).catch((e) => console.error("desactivar cupón", cupon.codigo, e));
+  }
 }

@@ -4,6 +4,7 @@ import { diasEntre, fechaCorta, fechaLarga, hoyAR, pesos } from "./logic.ts";
 import type { Config } from "./cupones.ts";
 import { type BloqueMail, plantilla, textosEfectivos } from "./textos.ts";
 import { catalogo, elegirRecomendacion, type Producto, productosComprados } from "./recomendar.ts";
+import { firmar } from "./firma.ts";
 
 export type Cupon = {
   id: string; codigo: string; monto_cupon: number; compra_minima: number | null; vence_el: string;
@@ -12,7 +13,13 @@ export type Cupon = {
   productos_comprados?: (string | number)[] | null;
 };
 
-export type Reco = { producto: Producto; precio_con_saldo: number; link: string } | null;
+export type Reco = { producto: Producto; precio_con_saldo: number; link: string; checkout?: boolean } | null;
+
+/** Link que arma el checkout con el producto, el saldo y los datos de su última compra. */
+export async function linkComprar(codigo: string, productoId: string): Promise<string> {
+  const s = await firmar(`${codigo}:${productoId}`);
+  return `${env("SUPABASE_URL")}/functions/v1/app/comprar?c=${encodeURIComponent(codigo)}&p=${productoId}&s=${s}`;
+}
 
 export type Tipo = "inicial" | `recordatorio_${number}`;
 
@@ -94,6 +101,7 @@ function bloqueUsos(t: ReturnType<typeof textos>, reco: Reco): string {
                 <a href="${esc(reco.link)}" style="font-family:${LEXEND};font-weight:600;font-size:14px;color:${TINTA};text-decoration:none">${esc(reco.producto.nombre)}</a>
                 <div style="font-size:13px;margin-top:3px;color:${GRIS}"><span style="text-decoration:line-through">${esc(pesos(reco.producto.precio))}</span>
                   &nbsp;<b style="font-family:${LEXEND};font-size:16px;color:${CELESTE}">${reco.precio_con_saldo > 0 ? esc(pesos(reco.precio_con_saldo)) : "Gratis"}</b> <span style="font-size:12px">con tu saldo</span></div>
+                <a href="${esc(reco.link)}" style="display:inline-block;margin-top:8px;font-family:${LEXEND};font-weight:600;font-size:13px;color:${CELESTE};text-decoration:none">${reco.checkout ? "Comprarla con mi saldo &rarr;" : "Ver producto &rarr;"}</a>
               </td>
             </tr>
           </table>` : "";
@@ -121,10 +129,15 @@ export async function recomendacionPara(c: Cupon, cfg: Config): Promise<Reco> {
     const p = elegirRecomendacion(cat, comprados, rc, enOrden);
     if (!p) return null;
     const base = cfg.url_tienda.replace(/\/$/, "");
+    // Talle único -> checkout armado. Con talles -> página del producto con el saldo cargado.
+    const checkout = !!p.variant_id;
     return {
       producto: p,
       precio_con_saldo: Math.max(0, Math.round(p.precio - Number(c.monto_cupon))),
-      link: `${base}/discount/${c.codigo}?redirect_to=${encodeURIComponent(`/productos/${p.handle}/`)}`,
+      link: checkout
+        ? await linkComprar(c.codigo, p.id)
+        : `${base}/discount/${c.codigo}?redirect_to=${encodeURIComponent(`/productos/${p.handle}/`)}`,
+      checkout,
     };
   } catch (e) {
     console.error("recomendacion", c.codigo, e);

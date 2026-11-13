@@ -7,6 +7,7 @@ import cuponOrden from "./cupon-orden.ts";
 import recordatorios from "./recordatorios.ts";
 import { pruebaMail, reenviar } from "./admin.ts";
 import { panel } from "./panel.ts";
+import comprar from "./comprar.ts";
 
 Deno.serve((req) => {
   const ruta = new URL(req.url).pathname.split("/").filter(Boolean).pop();
@@ -15,6 +16,7 @@ Deno.serve((req) => {
   if (ruta === "recordatorios") return recordatorios(req);
   if (ruta === "prueba-mail") return pruebaMail(req);
   if (ruta === "reenviar") return reenviar(req);
+  if (ruta === "comprar") return comprar(req);
   if (ruta && ruta.startsWith("panel-")) return panel(req, ruta);
   return new Response("not found", { status: 404 });
 });
