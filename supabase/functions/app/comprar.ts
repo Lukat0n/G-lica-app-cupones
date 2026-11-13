@@ -15,8 +15,9 @@ async function ultimaOrden(tn: TN, email: string | null) {
   const mail = email.trim().toLowerCase();
   const ordenes: any[] = await tn.req("GET", `/orders?q=${encodeURIComponent(mail)}&per_page=20`).catch(() => []);
   return ordenes
-    .filter((o) => String(o.contact_email ?? "").toLowerCase() === mail && o.status !== "cancelled")
-    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0] ?? null;
+    .filter((o) => String(o.contact_email ?? "").toLowerCase() === mail)
+    .sort((a, b) => (Number(a.status === "cancelled") - Number(b.status === "cancelled")) ||
+      Date.parse(b.created_at) - Date.parse(a.created_at))[0] ?? null;
 }
 
 function separarNombre(completo: string): [string, string] {
@@ -75,12 +76,12 @@ export default async function handler(req: Request): Promise<Response> {
       discount_type: "absolute",
       note: `Saldo GELICA ${codigo}`,
       ...(tieneDireccion ? {
-        shipping: [{
+        shipping: {
           shipping_address: {
             address: dir.address, number: dir.number ?? "", floor: dir.floor ?? "",
             locality: dir.locality ?? "", city: dir.city ?? "", province: dir.province ?? "", zipcode: dir.zipcode,
           },
-        }],
+        },
       } : {}),
     };
     const draft: any = await tn.req("POST", "/draft_orders", body);
