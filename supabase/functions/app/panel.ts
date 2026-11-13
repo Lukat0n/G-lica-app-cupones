@@ -5,7 +5,7 @@
 //   POST /app/panel-preview         -> devuelve el HTML del mail y los textos del checkout con un borrador (sin guardar)
 //   POST /app/panel-prueba          -> manda un mail de prueba con la configuración guardada
 import { db, TN } from "../_shared/tiendanube.ts";
-import { cargarConfig, type Config } from "../_shared/cupones.ts";
+import { cargarConfig, type Config, crearCuponPrueba } from "../_shared/cupones.ts";
 import { type Cupon, enviarMail, htmlMail, type Reco, textos, type Tipo, variables } from "../_shared/avisos.ts";
 import { catalogo, elegirRecomendacion } from "../_shared/recomendar.ts";
 import { calcularVencimiento, hoyAR, pesos, sumarDias } from "../_shared/logic.ts";
@@ -78,7 +78,7 @@ export async function panel(req: Request, ruta: string): Promise<Response> {
       const [{ data: resumen }, { data: ultimos }] = await Promise.all([
         s.from("resumen_cupones").select("*").eq("store_id", storeId).maybeSingle(),
         s.from("cupones").select("order_number,monto_base,monto_cupon,codigo,vence_el,estado,cliente_nombre,creado_en")
-          .eq("store_id", storeId).neq("estado", "creando").order("creado_en", { ascending: false }).limit(50),
+          .eq("store_id", storeId).not("estado", "in", "(creando,prueba)").order("creado_en", { ascending: false }).limit(50),
       ]);
       const { data: escalasFull } = await s.from("escalas").select("desde,hasta,monto_cupon,compra_minima")
         .eq("store_id", storeId).order("desde");
@@ -164,7 +164,12 @@ export async function panel(req: Request, ruta: string): Promise<Response> {
       const { cfg } = await cargarConfig(storeId);
       const tipo = (body.tipo ?? "inicial") as Tipo;
       const dias = tipo === "inicial" ? undefined : Number(String(tipo).split("_")[1]);
-      const c = { ...cuponEjemplo(cfg, 10000, body.nombre ?? "Dani", dias), cliente_email: body.to };
+      const rc = (cfg.recomendaciones ?? {}) as any;
+      const comprado = String(body.comprado ?? rc.prioridad?.[0] ?? "");
+      const c = await crearCuponPrueba(storeId, {
+        email: body.to, nombre: body.nombre ?? "Dani", monto: Number(body.monto ?? 10000),
+        dias: dias ?? cfg.dias_validez, comprados: comprado ? [comprado] : [],
+      });
       await enviarMail(c, cfg, tipo);
       return json({ ok: true });
     }

@@ -45,12 +45,19 @@ async function correr() {
     await s.from("cupones").update({ estado: "vencido" })
       .eq("store_id", storeId).eq("estado", "activo").lt("vence_el", hoy);
 
+    // Saldos de prueba vencidos: se borran (con sus checkouts)
+    const { data: pruebas } = await s.from("cupones").select("id").eq("store_id", storeId).eq("estado", "prueba").lt("vence_el", hoy);
+    for (const p of pruebas ?? []) {
+      await borrarBorradores(storeId, p.id).catch(() => {});
+      await s.from("cupones").delete().eq("id", p.id);
+    }
+
     // Limpieza: checkouts armados de saldos que ya se usaron, vencieron o se anularon
     const { data: viejos } = await s.from("borradores").select("cupon_id, cupones!inner(estado,store_id)")
       .eq("estado", "pendiente").eq("cupones.store_id", storeId);
     for (const b of viejos ?? []) {
       const c: any = (b as any).cupones;
-      if (c?.estado !== "activo") {
+      if (!["activo", "prueba"].includes(c?.estado)) {
         await borrarBorradores(storeId, b.cupon_id).catch(() => {});
       }
     }

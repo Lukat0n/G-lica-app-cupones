@@ -10,6 +10,15 @@ import { hoyAR } from "../_shared/logic.ts";
 
 const ir = (url: string) => new Response(null, { status: 302, headers: { Location: url } });
 
+async function ultimaOrden(tn: TN, email: string | null) {
+  if (!email) return null;
+  const mail = email.trim().toLowerCase();
+  const ordenes: any[] = await tn.req("GET", `/orders?q=${encodeURIComponent(mail)}&per_page=20`).catch(() => []);
+  return ordenes
+    .filter((o) => String(o.contact_email ?? "").toLowerCase() === mail && o.status !== "cancelled")
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0] ?? null;
+}
+
 function separarNombre(completo: string): [string, string] {
   const partes = String(completo ?? "").trim().split(/\s+/).filter(Boolean);
   if (partes.length <= 1) return [partes[0] ?? "Cliente", "-"];
@@ -38,7 +47,7 @@ export default async function handler(req: Request): Promise<Response> {
       : `${base}/discount/${codigo}`;
 
     // saldo ya usado, vencido o anulado -> a la tienda (sin descuento mágico)
-    if (cupon.estado !== "activo" || cupon.vence_el < hoyAR()) return ir(prod ? `${base}/productos/${prod.handle}/` : base);
+    if (!["activo", "prueba"].includes(cupon.estado) || cupon.vence_el < hoyAR()) return ir(prod ? `${base}/productos/${prod.handle}/` : base);
     if (!prod?.variant_id || !prod.disponible) return ir(paginaProducto);
 
     // ¿ya armamos uno hace poco? se reusa (si toca el botón dos veces no duplica pedidos)
@@ -48,7 +57,9 @@ export default async function handler(req: Request): Promise<Response> {
     if (previo?.checkout_url) return ir(previo.checkout_url);
 
     // datos de su última compra (la que generó el saldo)
-    const orden: any = await tn.orden(Number(cupon.order_id)).catch(() => null);
+    const orden: any = Number(cupon.order_id) > 0
+      ? await tn.orden(Number(cupon.order_id)).catch(() => null)
+      : await ultimaOrden(tn, cupon.cliente_email);
     const [nombre, apellido] = separarNombre(orden?.contact_name ?? orden?.customer?.name ?? cupon.cliente_nombre ?? "");
     const dir = orden?.shipping_address;
     const tieneDireccion = dir && dir.address && dir.zipcode && orden?.shipping_pickup_type !== "pickup";

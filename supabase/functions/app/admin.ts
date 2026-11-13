@@ -2,9 +2,8 @@
 //   POST /app/prueba-mail  {"to":"vos@mail.com"}   -> manda un mail de muestra
 //   POST /app/reenviar     {"codigos":["GELICA6K..."]} -> manda el aviso inicial que quedó pendiente
 import { db } from "../_shared/tiendanube.ts";
-import { cargarConfig } from "../_shared/cupones.ts";
+import { cargarConfig, crearCuponPrueba } from "../_shared/cupones.ts";
 import { avisoInicial, enviarMail } from "../_shared/avisos.ts";
-import { hoyAR, sumarDias } from "../_shared/logic.ts";
 
 async function autorizado(req: Request) {
   const { data } = await db().from("secretos_internos").select("valor").eq("nombre", "cron").single();
@@ -18,13 +17,11 @@ export async function pruebaMail(req: Request): Promise<Response> {
   const { cfg } = await cargarConfig(Number(t!.store_id));
   const dias = tipo === "inicial" ? cfg.dias_validez : Number(String(tipo).split("_")[1] ?? 7);
   try {
-    await enviarMail({
-      id: "prueba", codigo: "PRUEBA" + monto, monto_cupon: monto, compra_minima: null,
-      vence_el: sumarDias(hoyAR(), dias), cliente_nombre: nombre, cliente_email: to,
-      cliente_telefono: null, order_number: 31007, productos_comprados: comprados,
-    }, cfg, tipo);
+    const c = await crearCuponPrueba(Number(t!.store_id), { email: to, nombre, monto, dias, comprados });
+    await enviarMail(c, cfg, tipo);
     return new Response("enviado");
   } catch (e) {
+    console.error("prueba-mail", e);
     return new Response(`error: ${e}`, { status: 500 });
   }
 }

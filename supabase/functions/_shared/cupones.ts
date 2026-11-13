@@ -2,7 +2,7 @@
 import { db, TN } from "./tiendanube.ts";
 import {
   type BaseMonto, calcularVencimiento, codigosUsados, type Escala, escalaPara, generarCodigo, hoyAR, montoBase,
-  telefonoAR,
+  sumarDias, telefonoAR,
 } from "./logic.ts";
 import { avisoInicial } from "./avisos.ts";
 import { idsDeOrden } from "./recomendar.ts";
@@ -202,4 +202,26 @@ export async function registrarPagoBorrador(storeId: number, order: any) {
       code: cupon.codigo, type: "absolute", value: Number(cupon.monto_cupon).toFixed(2), valid: false,
     }).catch((e) => console.error("desactivar cupón", cupon.codigo, e));
   }
+}
+
+/** Saldo de prueba (no existe como cupón en Tiendanube; no cuenta en las estadísticas). Se borra solo al vencer. */
+export async function crearCuponPrueba(storeId: number, o: {
+  email: string; nombre?: string; monto?: number; dias?: number; comprados?: (string | number)[];
+}) {
+  const monto = Number(o.monto ?? 10000);
+  const { data, error } = await db().from("cupones").insert({
+    store_id: storeId,
+    order_id: -Math.floor(Date.now() / 1000),
+    order_number: 0,
+    monto_base: 0,
+    monto_cupon: monto,
+    codigo: generarCodigo("PRUEBA", monto),
+    vence_el: sumarDias(hoyAR(), Math.max(1, Number(o.dias ?? 20))),
+    estado: "prueba",
+    cliente_nombre: o.nombre ?? "Dani",
+    cliente_email: o.email,
+    productos_comprados: (o.comprados ?? []).map(Number).filter(Boolean),
+  }).select("*").single();
+  if (error) throw error;
+  return data;
 }

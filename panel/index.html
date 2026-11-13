@@ -531,7 +531,7 @@ async function probar(){
   $("pruebaRes").textContent = "Enviando…";
   const sel = $("mailSel").value;
   const tipo = sel === "mail_inicial" ? "inicial" : sel === "mail_recordatorio" ? "recordatorio_7" : "recordatorio_3";
-  try { await api("panel-prueba", { to, tipo, nombre: $("prevNombre").value }); $("pruebaRes").textContent = "Enviado a " + to; }
+  try { await api("panel-prueba", { to, tipo, nombre: $("prevNombre").value, monto: Number($("prevMonto").value || 10000), comprado: $("prevComprado").value || undefined }); $("pruebaRes").textContent = "Enviado a " + to; }
   catch(e){ $("pruebaRes").textContent = "Error: " + e.message; }
 }
 
