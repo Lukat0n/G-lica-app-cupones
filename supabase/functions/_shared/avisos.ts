@@ -24,7 +24,7 @@ export async function linkComprar(codigo: string, productoId: string): Promise<s
 /** Producto de un solo talle: al carrito con el saldo aplicado (usa el envío gratis de la tienda).
  *  Con talles: a la página del producto con el saldo aplicado, para que elija. */
 export function linkSaldo(base: string, codigo: string, p: Producto): string {
-  const destino = p.variant_id ? `/cart-link/${p.variant_id}` : `/productos/${p.handle}/`;
+  const destino = p.variant_id ? `/cart-link/${p.variant_id}-1` : `/productos/${p.handle}/`;
   return `${base}/discount/${codigo}?redirect_to=${encodeURIComponent(destino)}`;
 }
 
