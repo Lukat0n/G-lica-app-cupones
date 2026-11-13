@@ -45,12 +45,12 @@ async function correr() {
     await s.from("cupones").update({ estado: "vencido" })
       .eq("store_id", storeId).eq("estado", "activo").lt("vence_el", hoy);
 
-    // Limpieza: checkouts armados que nadie pagó (más de 3 días, o de saldos que ya no están activos)
-    const { data: viejos } = await s.from("borradores").select("cupon_id, creado_en, cupones!inner(estado,store_id)")
+    // Limpieza: checkouts armados de saldos que ya se usaron, vencieron o se anularon
+    const { data: viejos } = await s.from("borradores").select("cupon_id, cupones!inner(estado,store_id)")
       .eq("estado", "pendiente").eq("cupones.store_id", storeId);
     for (const b of viejos ?? []) {
       const c: any = (b as any).cupones;
-      if (c?.estado !== "activo" || Date.now() - Date.parse(b.creado_en) > 3 * 86_400_000) {
+      if (c?.estado !== "activo") {
         await borrarBorradores(storeId, b.cupon_id).catch(() => {});
       }
     }

@@ -44,7 +44,6 @@ export default async function handler(req: Request): Promise<Response> {
     // ¿ya armamos uno hace poco? se reusa (si toca el botón dos veces no duplica pedidos)
     const { data: previo } = await s.from("borradores").select("checkout_url,creado_en")
       .eq("cupon_id", cupon.id).eq("producto_id", Number(productoId)).eq("estado", "pendiente")
-      .gte("creado_en", new Date(Date.now() - 48 * 3600_000).toISOString())
       .order("creado_en", { ascending: false }).limit(1).maybeSingle();
     if (previo?.checkout_url) return ir(previo.checkout_url);
 
