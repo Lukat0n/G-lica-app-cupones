@@ -1,0 +1,11 @@
+# Estas funciones las llaman Tiendanube, el navegador del cliente o el cron,
+# así que no usan el JWT de Supabase (cada una valida su propia firma/clave).
+[functions.tn-auth]
+verify_jwt = false
+
+[functions.app]
+verify_jwt = false
+
+[functions.tn-privacy]
+verify_jwt = false
+

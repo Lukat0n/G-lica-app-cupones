@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GELICA · Saldo para la próxima compra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@600;700;800&family=Zalando+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--celeste:#3BB3DB;--gris:#5B7C8D;--neutro:#F5F7F9;--hielo:#EAF7FC;--tinta:#1D2730;--borde:#E2E8ED;--rojo:#C2410C}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--neutro);color:var(--tinta);font-family:'Zalando Sans',Arial,Helvetica,sans-serif;font-size:15px}
+  h1,h2,h3,.lex{font-family:Lexend,Arial,Helvetica,sans-serif}
+  header{background:var(--celeste);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:5}
+  header h1{font-size:18px;margin:0;font-weight:700}
+  header .sub{opacity:.9;font-size:13px}
+  header .der{margin-left:auto;display:flex;gap:10px;align-items:center}
+  nav{display:flex;gap:6px;padding:12px 24px 0;flex-wrap:wrap}
+  nav button{border:0;background:transparent;padding:10px 16px;border-radius:999px;font:600 14px Lexend,Arial;color:var(--gris);cursor:pointer}
+  nav button.on{background:#fff;color:var(--tinta);box-shadow:0 0 0 1px var(--borde)}
+  main{padding:16px 24px 120px;max-width:1280px;margin:0 auto}
+  .card{background:#fff;border-radius:16px;padding:22px;margin-bottom:16px;border:1px solid var(--borde)}
+  .card h2{font-size:17px;margin:0 0 4px}
+  .card p.ayuda{color:var(--gris);margin:0 0 16px;font-size:14px;line-height:1.45}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  label.campo{display:block;margin:12px 0 4px;font-weight:600;font-size:13px;color:var(--gris);letter-spacing:.3px}
+  input[type=text],input[type=number],input[type=date],input[type=email],input[type=password],textarea,select{
+    width:100%;padding:10px 12px;border:1px solid var(--borde);border-radius:10px;font:inherit;color:var(--tinta);background:#fff}
+  textarea{min-height:64px;resize:vertical;line-height:1.4}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--celeste);border-color:transparent}
+  .btn{border:0;border-radius:999px;padding:11px 22px;font:600 14px Lexend,Arial;cursor:pointer;background:var(--celeste);color:#fff}
+  .btn.sec{background:#fff;color:var(--tinta);box-shadow:inset 0 0 0 1px var(--borde)}
+  .btn.chico{padding:6px 12px;font-size:12px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .fila{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .pill{display:inline-block;background:var(--hielo);color:var(--celeste);font:700 11px Lexend;letter-spacing:1.2px;padding:5px 10px;border-radius:999px}
+  .toggle{display:flex;align-items:center;gap:10px;cursor:pointer;margin:10px 0}
+  .toggle input{width:18px;height:18px;accent-color:var(--celeste)}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font:600 12px Lexend;color:var(--gris);letter-spacing:.4px;padding:8px 6px;border-bottom:1px solid var(--borde)}
+  td{padding:6px;border-bottom:1px solid var(--neutro);vertical-align:middle}
+  td input{padding:8px 10px}
+  .muted{color:var(--gris);font-size:13px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .stat{background:#fff;border:1px solid var(--borde);border-radius:16px;padding:16px}
+  .stat .n{font:800 28px Lexend;margin-top:4px}
+  .stat .l{font:600 11px Lexend;letter-spacing:1px;color:var(--gris)}
+  .vars{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+  .vars code{background:var(--hielo);color:var(--tinta);padding:3px 8px;border-radius:999px;font-size:12px;cursor:pointer}
+  iframe.prev{width:100%;height:1050px;border:1px solid var(--borde);border-radius:16px;background:var(--neutro)}
+  .barra{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--borde);padding:12px 24px;display:flex;gap:12px;align-items:center;justify-content:flex-end;z-index:5}
+  .barra .estado{margin-right:auto;color:var(--gris);font-size:14px}
+  .estado.sucio{color:var(--rojo);font-weight:600}
+  .wa{background:#E7F7EE;border-radius:12px;padding:14px;white-space:pre-wrap;line-height:1.45;font-size:14px;max-width:420px}
+  .wa b{font-weight:700}
+  .mock{background:#fff;border:1px solid var(--borde);border-radius:16px;padding:18px;max-width:430px;margin:auto;font-family:Arial,Helvetica,sans-serif}
+  .mock .linea{color:#222;font-size:14px;padding:10px 0;display:flex;gap:10px;align-items:flex-start}
+  .mock .gris{color:#777;font-size:12px}
+  .slot{border:2px dashed var(--borde);border-radius:12px;padding:8px;margin:6px 0;cursor:pointer;color:var(--gris);font-size:12px;text-align:center}
+  .slot:hover{border-color:var(--celeste)}
+  .slot.on{border:none;padding:0;cursor:default}
+  .cartel{background:var(--hielo);border:2px solid var(--celeste);border-radius:16px;padding:16px;text-align:left}
+  .cartel .et{color:var(--celeste);font:700 11px Lexend;letter-spacing:1.4px}
+  .cartel h3{margin:6px 0;font-size:20px;color:var(--tinta)}
+  .cartel p{margin:0 0 10px;color:var(--gris);font-size:14px;line-height:1.4}
+  .cartel .b{display:block;text-align:center;background:var(--celeste);color:#fff;border-radius:999px;padding:11px;font:600 14px Lexend;margin-bottom:8px}
+  .cartel .c{background:#fff;border-radius:12px;padding:8px;text-align:center;font-size:12px;color:var(--tinta)}
+  #login{max-width:380px;margin:12vh auto;text-align:center}
+  .err{color:var(--rojo);font-size:14px;margin-top:8px;min-height:18px}
+  .oculto{display:none!important}
+  .reset{font-size:12px;color:var(--gris);cursor:pointer;text-decoration:underline;margin-left:8px;font-weight:400}
+  .tablas td.e{font:600 12px Lexend}
+  .e-activo{color:var(--celeste)} .e-usado{color:#15803D} .e-vencido{color:var(--gris)} .e-anulado{color:var(--rojo)}
+</style>
+</head>
+<body>
+
+<div id="login" class="card">
+  <span class="pill">GELICA</span>
+  <h2 style="margin:14px 0 6px">Saldo para la próxima compra</h2>
+  <p class="ayuda">Ingresá la clave del panel.</p>
+  <input id="clave" type="password" placeholder="Clave" autocomplete="current-password">
+  <div class="err" id="loginErr"></div>
+  <button class="btn" style="width:100%;margin-top:6px" onclick="entrar()">Entrar</button>
+</div>
+
+<div id="app" class="oculto">
+  <header>
+    <div><h1>Saldo para la próxima compra</h1><div class="sub">GELICA · Tiendanube</div></div>
+    <div class="der"><label class="toggle" style="margin:0;color:#fff"><input type="checkbox" id="activa"> <span id="activaTxt" class="lex" style="font-size:13px">Activa</span></label></div>
+  </header>
+  <nav id="tabs">
+    <button data-t="resumen" class="on">Resumen</button>
+    <button data-t="saldo">Saldo y vencimiento</button>
+    <button data-t="textos">Mails</button>
+    <button data-t="checkout">Página de pedido</button>
+    <button data-t="avisos">Recordatorios y WhatsApp</button>
+  </nav>
+  <main>
+
+    <!-- RESUMEN -->
+    <section data-s="resumen">
+      <div class="stats" id="stats"></div>
+      <div class="card" style="margin-top:16px">
+        <h2>Últimos saldos entregados</h2>
+        <p class="ayuda">Cada compra pagada genera un saldo con código único. Se marca "usado" cuando lo aplican en otra compra.</p>
+        <div style="overflow:auto"><table class="tablas" id="ultimos"></table></div>
+      </div>
+    </section>
+
+    <!-- SALDO -->
+    <section data-s="saldo" class="oculto">
+      <div class="grid2">
+        <div class="card">
+          <h2>¿Cuándo vence el saldo?</h2>
+          <p class="ayuda">Aplica a los saldos nuevos. Los que ya se entregaron mantienen su fecha.</p>
+          <label class="toggle"><input type="radio" name="modo" value="dias"> <b>Una cantidad de días desde la compra</b></label>
+          <div class="fila" style="margin-left:28px"><input type="number" id="dias" min="1" max="365" style="width:100px"> <span class="muted">días</span></div>
+          <label class="toggle" style="margin-top:16px"><input type="radio" name="modo" value="fecha"> <b>Todos vencen la misma fecha</b> <span class="muted">(campañas: Navidad, Día de la Madre…)</span></label>
+          <div class="fila" style="margin-left:28px"><input type="date" id="fecha" style="width:190px"></div>
+          <p class="muted" style="margin:10px 0 0 28px">Si la fecha ya pasó o faltan menos de 3 días, se usa la cantidad de días.</p>
+          <div id="ejemploVence" class="pill" style="margin-top:16px"></div>
+        </div>
+        <div class="card">
+          <h2>Cómo se calcula</h2>
+          <label class="campo">MONTO DE LA COMPRA QUE SE USA</label>
+          <select id="base">
+            <option value="total_sin_envio">Lo que pagó, sin el envío (recomendado)</option>
+            <option value="total">Lo que pagó, con envío</option>
+            <option value="subtotal">Precio de lista de los productos, antes de descuentos</option>
+          </select>
+          <label class="toggle" style="margin-top:16px"><input type="checkbox" id="combina"> Se suma a otras promos y descuentos (3x2, transferencia, etc.)</label>
+          <label class="campo">LINK DE LA TIENDA</label>
+          <input type="text" id="url">
+        </div>
+      </div>
+      <div class="card">
+        <h2>Escalas</h2>
+        <p class="ayuda">Según cuánto gastó, cuánto saldo recibe. Cada escala empieza donde termina la anterior. Dejá "hasta" vacío en la última para "sin tope". <b>Compra mínima</b> = cuánto tiene que gastar para poder usar el saldo (vacío = sin mínimo).</p>
+        <table>
+          <thead><tr><th>DESDE</th><th>HASTA</th><th>SALDO QUE RECIBE</th><th>COMPRA MÍNIMA PARA USARLO</th><th></th></tr></thead>
+          <tbody id="escalas"></tbody>
+        </table>
+        <button class="btn sec chico" style="margin-top:10px" onclick="agregarEscala()">+ Agregar escala</button>
+      </div>
+    </section>
+
+    <!-- TEXTOS MAILS -->
+    <section data-s="textos" class="oculto">
+      <div class="grid2">
+        <div>
+          <div class="card">
+            <h2>Textos de los mails</h2>
+            <p class="ayuda">Tocá una variable para copiarla. Se completa sola con los datos de cada cliente.</p>
+            <select id="mailSel">
+              <option value="mail_inicial">Mail al confirmar el pago</option>
+              <option value="mail_recordatorio">Recordatorio (faltan más de 3 días)</option>
+              <option value="mail_recordatorio_urgente">Recordatorio urgente (faltan 3 días o menos)</option>
+            </select>
+            <div class="vars" id="vars1"></div>
+            <div id="camposMail"></div>
+            <label class="campo">TIP DE USO (al pie de todos los mails, vacío = no se muestra) <span class="reset" onclick="resetTxt('tip_uso')">restaurar</span></label>
+            <textarea data-k="tip_uso"></textarea>
+          </div>
+          <div class="card">
+            <h2>Mandame una prueba</h2>
+            <p class="ayuda">Llega con datos de ejemplo y lo que tengas <b>guardado</b>.</p>
+            <div class="fila"><input type="email" id="pruebaTo" placeholder="tu@mail.com" style="flex:1"><button class="btn" onclick="probar()">Enviar</button></div>
+            <div class="muted" id="pruebaRes" style="margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="card" style="position:sticky;top:76px;align-self:start">
+          <div class="fila"><span class="pill">VISTA PREVIA</span><span class="muted" id="asuntoPrev"></span></div>
+          <div class="fila" style="margin:10px 0"><span class="muted">Ejemplo:</span>
+            <input type="text" id="prevNombre" value="Dani" style="width:110px">
+            <select id="prevMonto" style="width:120px"></select></div>
+          <iframe class="prev" id="iframeMail"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHECKOUT -->
+    <section data-s="checkout" class="oculto">
+      <div class="grid2">
+        <div class="card">
+          <h2>Recuadro en la página del pedido</h2>
+          <p class="ayuda">Aparece cuando el pago está confirmado (con transferencia, recién cuando la acreditás). Elegí dónde: tocá un lugar en la vista previa.</p>
+          <select id="slot">
+            <option value="before_order_number">Arriba de todo</option>
+            <option value="after_order_number">Debajo del número de orden (arriba del "¡Excelente!")</option>
+            <option value="before_order_summary">Antes del resumen del pedido</option>
+            <option value="after_order_summary">Después del resumen del pedido</option>
+          </select>
+          <div class="vars" id="vars2"></div>
+          <div id="camposCheckout"></div>
+          <p class="muted" style="margin-top:14px">Nota: la posición exacta la define Tiendanube y puede variar entre celular y compu. Probala con una compra.</p>
+        </div>
+        <div class="card" style="position:sticky;top:76px;align-self:start">
+          <span class="pill">VISTA PREVIA (aproximada)</span>
+          <div class="mock" style="margin-top:12px" id="mock"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AVISOS -->
+    <section data-s="avisos" class="oculto">
+      <div class="grid2">
+        <div class="card">
+          <h2>Recordatorios</h2>
+          <p class="ayuda">Se mandan a las 10 de la mañana, <b>solo si el saldo no se usó</b>.</p>
+          <table><thead><tr><th>DÍAS ANTES DE VENCER</th><th>CANAL</th><th></th></tr></thead><tbody id="recs"></tbody></table>
+          <button class="btn sec chico" style="margin-top:10px" onclick="agregarRec()">+ Agregar recordatorio</button>
+          <h2 style="margin-top:24px">Al confirmar el pago</h2>
+          <label class="toggle"><input type="checkbox" id="iniMail"> Mandar mail</label>
+          <label class="toggle"><input type="checkbox" id="iniWa"> Mandar WhatsApp</label>
+        </div>
+        <div class="card">
+          <h2>Textos de WhatsApp</h2>
+          <p class="ayuda">*texto* sale en negrita en WhatsApp.</p>
+          <div class="vars" id="vars3"></div>
+          <label class="campo">AL CONFIRMAR EL PAGO <span class="reset" onclick="resetTxt('whatsapp_inicial')">restaurar</span></label>
+          <textarea data-k="whatsapp_inicial" style="min-height:100px"></textarea>
+          <div class="wa" id="waPrev1" style="margin-top:8px"></div>
+          <label class="campo">RECORDATORIO <span class="reset" onclick="resetTxt('whatsapp_recordatorio')">restaurar</span></label>
+          <textarea data-k="whatsapp_recordatorio" style="min-height:100px"></textarea>
+          <div class="wa" id="waPrev2" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="barra">
+    <span class="estado" id="estado">Todo guardado</span>
+    <button class="btn sec" onclick="cargar()">Descartar cambios</button>
+    <button class="btn" id="guardarBtn" onclick="guardar()">Guardar</button>
+  </div>
+</div>
+
+<script>
+const API = "https://mbipihpxrjkfnpvtomca.supabase.co/functions/v1/app/";
+const VARS = ["{nombre}","{nombre_coma}","{monto}","{vence}","{vence_corto}","{dias}","{dias_txt}","{codigo}","{link}","{web}"];
+const CAMPOS_MAIL = [
+  ["asunto","ASUNTO"],["etiqueta","ETIQUETA (arriba del título)"],["titulo","TÍTULO"],["bajada","TEXTO"],
+  ["caja_label","RECUADRO: ETIQUETA"],["caja_vence","RECUADRO: VENCIMIENTO"],["boton","BOTÓN"],["nota","DEBAJO DEL BOTÓN"],
+  ["beneficios","BENEFICIOS CON ✓ (uno por renglón)"],["codigo_linea","LÍNEA DEL CÓDIGO"]];
+const CAMPOS_CHECKOUT = [["etiqueta","ETIQUETA"],["titulo","TÍTULO"],["bajada","TEXTO"],["boton","BOTÓN"],["codigo_linea","LÍNEA DEL CÓDIGO"]];
+
+let clave = "";
+let datos = null;       // lo que vino del servidor
+let draft = null;       // cfg editándose
+let escalas = [];
+let sucio = false;
+
+function guardarClave(v){ try{ localStorage.setItem("gelica_panel", v) }catch(e){} }
+function leerClave(){ try{ return localStorage.getItem("gelica_panel") || "" }catch(e){ return "" } }
+
+async function api(ruta, body){
+  const r = await fetch(API + ruta, {
+    method: body ? "POST" : "GET",
+    headers: { "x-panel-key": clave, ...(body ? {"Content-Type":"application/json"} : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const j = await r.json().catch(()=>({error:"Respuesta inválida"}));
+  if (!r.ok) throw Object.assign(new Error(j.error || r.status), { status: r.status });
+  return j;
+}
+
+async function entrar(){
+  clave = document.getElementById("clave").value.trim();
+  document.getElementById("loginErr").textContent = "";
+  try { await cargar(); guardarClave(clave); }
+  catch(e){ document.getElementById("loginErr").textContent = e.status === 401 ? "Clave incorrecta" : "No se pudo conectar: " + e.message; }
+}
+document.getElementById("clave").addEventListener("keydown", e => { if (e.key === "Enter") entrar(); });
+
+const $ = id => document.getElementById(id);
+const pesos = n => "$" + Math.round(Number(n||0)).toLocaleString("es-AR");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function cargar(){
+  datos = await api("panel-datos");
+  draft = JSON.parse(JSON.stringify(datos.cfg));
+  draft.textos = JSON.parse(JSON.stringify(datos.textos)); // textos efectivos completos
+  escalas = datos.escalas.map(e => ({...e}));
+  $("login").classList.add("oculto"); $("app").classList.remove("oculto");
+  pintar(); marcar(false); previewPronto();
+}
+
+function marcar(v){ sucio = v; $("estado").textContent = v ? "Cambios sin guardar" : "Todo guardado"; $("estado").classList.toggle("sucio", v); }
+window.addEventListener("beforeunload", e => { if (sucio) { e.preventDefault(); e.returnValue = ""; } });
+
+function pintar(){
+  // header
+  $("activa").checked = !!draft.activa; $("activaTxt").textContent = draft.activa ? "Activa" : "Pausada";
+  // resumen
+  const r = datos.resumen || {};
+  $("stats").innerHTML = [
+    ["SALDOS ENTREGADOS", r.emitidos ?? 0], ["ACTIVOS", r.activos ?? 0], ["USADOS", r.usados ?? 0],
+    ["VENCIDOS", r.vencidos ?? 0], ["% DE USO", r.tasa_uso_pct != null ? r.tasa_uso_pct + "%" : "—"], ["PESOS CANJEADOS", pesos(r.pesos_canjeados)]
+  ].map(([l,n]) => `<div class="stat"><div class="l">${l}</div><div class="n">${n}</div></div>`).join("");
+  $("ultimos").innerHTML = `<thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>COMPRA</th><th>SALDO</th><th>CÓDIGO</th><th>VENCE</th><th>ESTADO</th></tr></thead><tbody>` +
+    (datos.ultimos.length ? datos.ultimos.map(c => `<tr><td>#${c.order_number ?? ""}</td><td>${esc(c.cliente_nombre)}</td><td>${pesos(c.monto_base)}</td><td><b>${pesos(c.monto_cupon)}</b></td><td><code>${esc(c.codigo)}</code></td><td>${esc(c.vence_el)}</td><td class="e e-${c.estado}">${c.estado.toUpperCase()}</td></tr>`).join("")
+      : `<tr><td colspan="7" class="muted">Todavía no hay saldos.</td></tr>`) + "</tbody>";
+  // saldo
+  document.querySelectorAll('input[name=modo]').forEach(x => x.checked = x.value === draft.vencimiento_modo);
+  $("dias").value = draft.dias_validez; $("fecha").value = draft.vencimiento_fecha || "";
+  $("base").value = draft.base_monto; $("combina").checked = !!draft.combina_con_promos; $("url").value = draft.url_tienda;
+  pintarEscalas(); pintarVence();
+  // mails
+  pintarCamposMail();
+  $("prevMonto").innerHTML = escalas.map(e => `<option value="${e.monto_cupon}">${pesos(e.monto_cupon)}</option>`).join("");
+  if (escalas[1]) $("prevMonto").value = escalas[1].monto_cupon;
+  document.querySelector('textarea[data-k=tip_uso]').value = draft.textos.tip_uso;
+  // checkout
+  $("slot").value = draft.slot_checkout;
+  $("camposCheckout").innerHTML = CAMPOS_CHECKOUT.map(([k,l]) => campo(`checkout.${k}`, l, draft.textos.checkout[k])).join("");
+  // avisos
+  $("iniMail").checked = !!draft.aviso_inicial_email; $("iniWa").checked = !!draft.aviso_inicial_whatsapp;
+  pintarRecs();
+  document.querySelector('textarea[data-k=whatsapp_inicial]').value = draft.textos.whatsapp_inicial;
+  document.querySelector('textarea[data-k=whatsapp_recordatorio]').value = draft.textos.whatsapp_recordatorio;
+  ["vars1","vars2","vars3"].forEach(id => $(id).innerHTML = VARS.map(v => `<code title="Copiar" onclick="navigator.clipboard&&navigator.clipboard.writeText('${v}')">${v}</code>`).join(""));
+}
+
+function campo(k, label, valor){
+  const v = Array.isArray(valor) ? valor.join("\n") : valor;
+  const largo = /bajada|nota|beneficios/.test(k);
+  return `<label class="campo">${label} <span class="reset" onclick="resetTxt('${k}')">restaurar</span></label>` +
+    (largo ? `<textarea data-k="${k}">${esc(v)}</textarea>` : `<input type="text" data-k="${k}" value="${esc(v)}">`);
+}
+function pintarCamposMail(){
+  const b = $("mailSel").value;
+  $("camposMail").innerHTML = CAMPOS_MAIL.map(([k,l]) => campo(`${b}.${k}`, l, draft.textos[b][k])).join("");
+}
+$("mailSel").addEventListener("change", () => { pintarCamposMail(); previewPronto(); });
+
+function setTexto(k, valor){
+  const [a,b] = k.split(".");
+  if (b) draft.textos[a][b] = b === "beneficios" ? valor.split("\n").map(s=>s.trim()).filter(Boolean) : valor;
+  else draft.textos[a] = valor;
+}
+function resetTxt(k){
+  const [a,b] = k.split(".");
+  const def = b ? datos.textos_default[a][b] : datos.textos_default[a];
+  setTexto(k, Array.isArray(def) ? def.join("\n") : def);
+  pintar(); marcar(true); previewPronto();
+}
+
+document.addEventListener("input", e => {
+  const k = e.target.dataset && e.target.dataset.k;
+  if (k) { setTexto(k, e.target.value); marcar(true); previewPronto(); }
+});
+
+// --- saldo
+document.querySelectorAll('input[name=modo]').forEach(x => x.addEventListener("change", () => { draft.vencimiento_modo = x.value; marcar(true); pintarVence(); previewPronto(); }));
+$("dias").addEventListener("input", e => { draft.dias_validez = Number(e.target.value); marcar(true); pintarVence(); previewPronto(); });
+$("fecha").addEventListener("input", e => { draft.vencimiento_fecha = e.target.value || null; marcar(true); pintarVence(); previewPronto(); });
+$("base").addEventListener("change", e => { draft.base_monto = e.target.value; marcar(true); });
+$("combina").addEventListener("change", e => { draft.combina_con_promos = e.target.checked; marcar(true); });
+$("url").addEventListener("input", e => { draft.url_tienda = e.target.value.trim(); marcar(true); previewPronto(); });
+$("activa").addEventListener("change", e => { draft.activa = e.target.checked; $("activaTxt").textContent = draft.activa ? "Activa" : "Pausada"; marcar(true); });
+
+function pintarVence(){
+  const hoy = new Date(); hoy.setHours(12);
+  let v = new Date(hoy); v.setDate(v.getDate() + Number(draft.dias_validez || 0));
+  if (draft.vencimiento_modo === "fecha" && draft.vencimiento_fecha) {
+    const f = new Date(draft.vencimiento_fecha + "T12:00:00");
+    if ((f - hoy) / 864e5 >= 3) v = f;
+  }
+  $("ejemploVence").textContent = "Una compra de hoy vence el " + v.toLocaleDateString("es-AR", { weekday:"long", day:"numeric", month:"long" });
+}
+
+function pintarEscalas(){
+  escalas.sort((a,b) => Number(a.desde) - Number(b.desde));
+  $("escalas").innerHTML = escalas.map((e,i) => `<tr>
+    <td class="muted">${i === 0 ? "$0" : "más de " + pesos(escalas[i-1].hasta)}</td>
+    <td><input type="number" value="${e.hasta ?? ""}" placeholder="sin tope" onchange="escHasta(${i}, this.value)"></td>
+    <td><input type="number" value="${e.monto_cupon}" onchange="escSet(${i}, 'monto_cupon', this.value)"></td>
+    <td><input type="number" value="${e.compra_minima ?? ""}" placeholder="sin mínimo" onchange="escSet(${i}, 'compra_minima', this.value)"></td>
+    <td>${escalas.length > 1 ? `<button class="btn sec chico" onclick="quitarEscala(${i})">Quitar</button>` : ""}</td></tr>`).join("");
+}
+function escHasta(i, v){
+  escalas[i].hasta = v === "" ? null : Number(v);
+  if (escalas[i+1]) escalas[i+1].desde = escalas[i].hasta ?? escalas[i+1].desde;
+  marcar(true); pintarEscalas();
+}
+function escSet(i, k, v){ escalas[i][k] = v === "" ? null : Number(v); marcar(true); pintar(); }
+function agregarEscala(){
+  const u = escalas[escalas.length-1];
+  if (u.hasta == null) u.hasta = Number(u.desde) + 100000;
+  escalas.push({ desde: u.hasta, hasta: null, monto_cupon: u.monto_cupon, compra_minima: null });
+  marcar(true); pintarEscalas();
+}
+function quitarEscala(i){
+  escalas.splice(i,1);
+  for (let j = 0; j < escalas.length; j++) escalas[j].desde = j === 0 ? 0 : escalas[j-1].hasta;
+  escalas[escalas.length-1].hasta = escalas[escalas.length-1].hasta ?? null;
+  marcar(true); pintarEscalas();
+}
+
+// --- recordatorios
+function pintarRecs(){
+  draft.recordatorios.sort((a,b) => b.dias_antes - a.dias_antes);
+  $("recs").innerHTML = draft.recordatorios.map((r,i) => `<tr>
+    <td><input type="number" min="0" max="60" value="${r.dias_antes}" onchange="recSet(${i},'dias_antes',Number(this.value))" style="width:100px"></td>
+    <td><select onchange="recSet(${i},'canal',this.value)"><option value="email" ${r.canal==="email"?"selected":""}>Mail</option><option value="whatsapp" ${r.canal==="whatsapp"?"selected":""}>WhatsApp</option></select></td>
+    <td><button class="btn sec chico" onclick="draft.recordatorios.splice(${i},1);marcar(true);pintarRecs()">Quitar</button></td></tr>`).join("");
+}
+function recSet(i,k,v){ draft.recordatorios[i][k] = v; marcar(true); pintarRecs(); }
+function agregarRec(){ draft.recordatorios.push({ dias_antes: 1, canal: "email" }); marcar(true); pintarRecs(); }
+$("iniMail").addEventListener("change", e => { draft.aviso_inicial_email = e.target.checked; marcar(true); });
+$("iniWa").addEventListener("change", e => { draft.aviso_inicial_whatsapp = e.target.checked; marcar(true); });
+$("slot").addEventListener("change", e => { draft.slot_checkout = e.target.value; marcar(true); pintarMock(); });
+
+// --- vista previa
+let tPrev = null, ultimoPrev = null;
+function previewPronto(){ clearTimeout(tPrev); tPrev = setTimeout(preview, 400); }
+$("prevNombre").addEventListener("input", previewPronto);
+$("prevMonto").addEventListener("change", previewPronto);
+async function preview(){
+  const sel = $("mailSel").value;
+  const tipo = sel === "mail_inicial" ? "inicial" : sel === "mail_recordatorio" ? "recordatorio_7" : "recordatorio_3";
+  try {
+    const p = await api("panel-preview", { cfg: draft, tipo, nombre: $("prevNombre").value, monto: Number($("prevMonto").value || 10000) });
+    ultimoPrev = p;
+    $("iframeMail").srcdoc = p.html;
+    $("asuntoPrev").textContent = "Asunto: " + p.asunto;
+    $("waPrev1").innerHTML = waFmt(p.whatsapp);
+    $("waPrev2").innerHTML = waFmt(p.whatsapp_recordatorio);
+    pintarMock();
+  } catch(e) { $("asuntoPrev").textContent = "No se pudo generar la vista previa: " + e.message; }
+}
+const waFmt = s => esc(s).replace(/\*([^*]+)\*/g, "<b>$1</b>");
+
+function pintarMock(){
+  const c = ultimoPrev && ultimoPrev.checkout;
+  const cartel = c ? `<div class="cartel"><div class="et">${esc(c.etiqueta)}</div><h3>${esc(c.titulo)}</h3><p>${esc(c.bajada)}</p><span class="b">${esc(c.boton)}</span><div class="c">${esc(c.codigo_linea)}</div></div>` : "";
+  const s = (id, label) => draft.slot_checkout === id
+    ? `<div class="slot on">${cartel}</div>`
+    : `<div class="slot" onclick="draft.slot_checkout='${id}';$('slot').value='${id}';marcar(true);pintarMock()">Poner acá</div>`;
+  $("mock").innerHTML =
+    s("before_order_number") +
+    `<div class="gris">ORDEN: #31007</div>` +
+    s("after_order_number") +
+    `<div class="linea">✓ <span>¡Excelente! El pago fue confirmado, ya estamos preparando el envío.</span></div>
+     <div class="linea">🚚 <span>Destino: Camino del Perú 618</span></div>` +
+    s("before_order_summary") +
+    `<div class="linea" style="background:#f6f6f6;border-radius:8px;padding:10px"><span><b>Tu pedido</b><br><span class="gris">Rodillera Frío-Calor × 3 · $88.146</span></span></div>` +
+    s("after_order_summary") +
+    `<div class="linea gris">Información del pedido · Comunicate con nosotros</div>`;
+}
+
+async function probar(){
+  const to = $("pruebaTo").value.trim();
+  if (!to) return;
+  if (sucio) { $("pruebaRes").textContent = "Guardá primero: la prueba usa lo guardado."; return; }
+  $("pruebaRes").textContent = "Enviando…";
+  const sel = $("mailSel").value;
+  const tipo = sel === "mail_inicial" ? "inicial" : sel === "mail_recordatorio" ? "recordatorio_7" : "recordatorio_3";
+  try { await api("panel-prueba", { to, tipo, nombre: $("prevNombre").value }); $("pruebaRes").textContent = "Enviado a " + to; }
+  catch(e){ $("pruebaRes").textContent = "Error: " + e.message; }
+}
+
+async function guardar(){
+  $("guardarBtn").disabled = true;
+  try {
+    await api("panel-guardar", { cfg: draft, escalas });
+    marcar(false);
+    await cargar();
+    $("estado").textContent = "Guardado ✓";
+  } catch(e) { $("estado").textContent = "No se guardó: " + e.message; $("estado").classList.add("sucio"); }
+  finally { $("guardarBtn").disabled = false; }
+}
+
+// tabs
+document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll("main section").forEach(s => s.classList.toggle("oculto", s.dataset.s !== b.dataset.t));
+  if (b.dataset.t === "textos" || b.dataset.t === "checkout") previewPronto();
+}));
+
+// auto-login
+clave = leerClave();
+if (clave) cargar().catch(() => { clave = ""; });
+</script>
+</body>
+</html>

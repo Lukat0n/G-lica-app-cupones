@@ -1,0 +1,5 @@
+{
+  "buildCommand": "echo sin build",
+  "outputDirectory": "panel",
+  "framework": null
+}
