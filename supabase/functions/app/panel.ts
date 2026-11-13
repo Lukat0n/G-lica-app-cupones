@@ -22,7 +22,7 @@ const json = (b: unknown, status = 200) =>
 const CAMPOS_EDITABLES = [
   "activa", "dias_validez", "vencimiento_modo", "vencimiento_fecha", "base_monto", "combina_con_promos",
   "recordatorios", "aviso_inicial_email", "aviso_inicial_whatsapp", "slot_checkout", "url_tienda", "textos",
-  "recomendaciones",
+  "recomendaciones", "saldo_en_compras_con_saldo",
 ] as const;
 
 async function tiendaId(): Promise<number> {

@@ -136,6 +136,7 @@
             <option value="subtotal">Precio de lista de los productos, antes de descuentos</option>
           </select>
           <label class="toggle" style="margin-top:16px"><input type="checkbox" id="combina"> Se suma a otras promos y descuentos (3x2, transferencia, etc.)</label>
+          <label class="toggle" style="margin-top:10px"><input type="checkbox" id="encadena"> Dar saldo nuevo también cuando la compra se pagó usando un saldo</label>
           <label class="campo">LINK DE LA TIENDA</label>
           <input type="text" id="url">
         </div>
@@ -330,7 +331,7 @@ function pintar(){
   // saldo
   document.querySelectorAll('input[name=modo]').forEach(x => x.checked = x.value === draft.vencimiento_modo);
   $("dias").value = draft.dias_validez; $("fecha").value = draft.vencimiento_fecha || "";
-  $("base").value = draft.base_monto; $("combina").checked = !!draft.combina_con_promos; $("url").value = draft.url_tienda;
+  $("base").value = draft.base_monto; $("combina").checked = !!draft.combina_con_promos; $("encadena").checked = draft.saldo_en_compras_con_saldo !== false; $("url").value = draft.url_tienda;
   pintarEscalas(); pintarVence();
   // mails
   pintarCamposMail();
@@ -384,6 +385,7 @@ $("dias").addEventListener("input", e => { draft.dias_validez = Number(e.target.
 $("fecha").addEventListener("input", e => { draft.vencimiento_fecha = e.target.value || null; marcar(true); pintarVence(); previewPronto(); });
 $("base").addEventListener("change", e => { draft.base_monto = e.target.value; marcar(true); });
 $("combina").addEventListener("change", e => { draft.combina_con_promos = e.target.checked; marcar(true); });
+$("encadena").addEventListener("change", e => { draft.saldo_en_compras_con_saldo = e.target.checked; marcar(true); });
 $("url").addEventListener("input", e => { draft.url_tienda = e.target.value.trim(); marcar(true); previewPronto(); });
 $("activa").addEventListener("change", e => { draft.activa = e.target.checked; $("activaTxt").textContent = draft.activa ? "Activa" : "Pausada"; marcar(true); });
 

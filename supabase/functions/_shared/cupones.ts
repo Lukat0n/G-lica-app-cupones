@@ -25,6 +25,7 @@ export type Config = {
   slot_checkout: string;
   textos: Record<string, unknown>;
   recomendaciones: Record<string, unknown>;
+  saldo_en_compras_con_saldo: boolean;
 };
 
 export async function cargarConfig(storeId: number): Promise<{ cfg: Config; escalas: Escala[] }> {
@@ -51,10 +52,21 @@ export function datosCliente(order: any) {
 }
 
 /** Qué cupón le corresponde a esta orden (sin crear nada). */
+/** ¿Esta compra se pagó usando un saldo de la app? (por código de cupón o por checkout armado) */
+export async function usoUnSaldo(storeId: number, order: any): Promise<boolean> {
+  if (/Saldo GELICA [A-Z0-9]+/.test(String(order.note ?? "") + " " + String(order.owner_note ?? ""))) return true;
+  const codigos = codigosUsados(order);
+  if (!codigos.length) return false;
+  const { count } = await db().from("cupones").select("id", { count: "exact", head: true })
+    .eq("store_id", storeId).in("codigo", codigos);
+  return (count ?? 0) > 0;
+}
+
 export async function previsualizar(storeId: number, order: any) {
   const { cfg, escalas } = await cargarConfig(storeId);
   if (!cfg.activa) return null;
   if (cfg.origenes_excluidos.includes(order.storefront)) return null;
+  if (cfg.saldo_en_compras_con_saldo === false && await usoUnSaldo(storeId, order)) return null;
   const base = montoBase(order, cfg.base_monto);
   const escala = escalaPara(base, escalas);
   if (!escala) return null;
