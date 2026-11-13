@@ -21,6 +21,13 @@ export async function linkComprar(codigo: string, productoId: string): Promise<s
   return `${env("SUPABASE_URL")}/functions/v1/app/comprar?c=${encodeURIComponent(codigo)}&p=${productoId}&s=${s}`;
 }
 
+/** Producto de un solo talle: al carrito con el saldo aplicado (usa el envío gratis de la tienda).
+ *  Con talles: a la página del producto con el saldo aplicado, para que elija. */
+export function linkSaldo(base: string, codigo: string, p: Producto): string {
+  const destino = p.variant_id ? `/cart-link/${p.variant_id}` : `/productos/${p.handle}/`;
+  return `${base}/discount/${codigo}?redirect_to=${encodeURIComponent(destino)}`;
+}
+
 export type Tipo = "inicial" | `recordatorio_${number}`;
 
 const LOGO_BLANCO = "https://d1a9qnv764bsoo.cloudfront.net/stores/005/002/067/rte/logo-gelica-blanco.png";
@@ -129,14 +136,12 @@ export async function recomendacionPara(c: Cupon, cfg: Config): Promise<Reco> {
     const p = elegirRecomendacion(cat, comprados, rc, enOrden);
     if (!p) return null;
     const base = cfg.url_tienda.replace(/\/$/, "");
-    // Talle único -> checkout armado. Con talles -> página del producto con el saldo cargado.
+    // Talle único -> al carrito con el saldo. Con talles -> página del producto con el saldo cargado.
     const checkout = !!p.variant_id;
     return {
       producto: p,
       precio_con_saldo: Math.max(0, Math.round(p.precio - Number(c.monto_cupon))),
-      link: checkout
-        ? await linkComprar(c.codigo, p.id)
-        : `${base}/discount/${c.codigo}?redirect_to=${encodeURIComponent(`/productos/${p.handle}/`)}`,
+      link: linkSaldo(base, c.codigo, p),
       checkout,
     };
   } catch (e) {

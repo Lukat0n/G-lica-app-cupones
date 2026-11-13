@@ -6,7 +6,7 @@
 //   POST /app/panel-prueba          -> manda un mail de prueba con la configuración guardada
 import { db, TN } from "../_shared/tiendanube.ts";
 import { cargarConfig, type Config, crearCuponPrueba } from "../_shared/cupones.ts";
-import { type Cupon, enviarMail, htmlMail, type Reco, textos, type Tipo, variables } from "../_shared/avisos.ts";
+import { type Cupon, enviarMail, htmlMail, linkSaldo, type Reco, textos, type Tipo, variables } from "../_shared/avisos.ts";
 import { catalogo, elegirRecomendacion } from "../_shared/recomendar.ts";
 import { calcularVencimiento, hoyAR, pesos, sumarDias } from "../_shared/logic.ts";
 import { plantilla, TEXTOS_DEFAULT, textosEfectivos } from "../_shared/textos.ts";
@@ -126,7 +126,7 @@ export async function panel(req: Request, ruta: string): Promise<Response> {
       if (p) {
         reco = {
           producto: p, precio_con_saldo: Math.max(0, p.precio - c.monto_cupon),
-          link: `${cfg.url_tienda.replace(/\/$/, "")}/discount/${c.codigo}?redirect_to=${encodeURIComponent(`/productos/${p.handle}/`)}`,
+          link: linkSaldo(cfg.url_tienda.replace(/\/$/, ""), c.codigo, p),
         };
       }
       const t = textos(c, cfg, tipo, reco);
