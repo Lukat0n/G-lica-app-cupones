@@ -4,10 +4,11 @@
 //   POST /app/panel-guardar         -> guarda configuración + escalas + textos
 //   POST /app/panel-preview         -> devuelve el HTML del mail y los textos del checkout con un borrador (sin guardar)
 //   POST /app/panel-prueba          -> manda un mail de prueba con la configuración guardada
-import { db } from "../_shared/tiendanube.ts";
+import { db, TN } from "../_shared/tiendanube.ts";
 import { cargarConfig, type Config } from "../_shared/cupones.ts";
-import { type Cupon, enviarMail, htmlMail, textos, type Tipo, variables } from "../_shared/avisos.ts";
-import { calcularVencimiento, hoyAR, sumarDias } from "../_shared/logic.ts";
+import { type Cupon, enviarMail, htmlMail, type Reco, textos, type Tipo, variables } from "../_shared/avisos.ts";
+import { catalogo, elegirRecomendacion } from "../_shared/recomendar.ts";
+import { calcularVencimiento, hoyAR, pesos, sumarDias } from "../_shared/logic.ts";
 import { plantilla, TEXTOS_DEFAULT, textosEfectivos } from "../_shared/textos.ts";
 
 const CORS = {
@@ -21,6 +22,7 @@ const json = (b: unknown, status = 200) =>
 const CAMPOS_EDITABLES = [
   "activa", "dias_validez", "vencimiento_modo", "vencimiento_fecha", "base_monto", "combina_con_promos",
   "recordatorios", "aviso_inicial_email", "aviso_inicial_whatsapp", "slot_checkout", "url_tienda", "textos",
+  "recomendaciones",
 ] as const;
 
 async function tiendaId(): Promise<number> {
@@ -60,6 +62,7 @@ function validar(cfg: any, escalas: any[]): string | null {
   for (const r of cfg.recordatorios ?? []) {
     if (!(r.dias_antes >= 0 && r.dias_antes <= 60) || !["email", "whatsapp"].includes(r.canal)) return "Recordatorio inválido";
   }
+  if (cfg.recomendaciones !== undefined && (typeof cfg.recomendaciones !== "object" || Array.isArray(cfg.recomendaciones))) return "Recomendaciones inválidas";
   return null;
 }
 
@@ -113,7 +116,20 @@ export async function panel(req: Request, ruta: string): Promise<Response> {
       const tipo = (body.tipo ?? "inicial") as Tipo;
       const dias = tipo === "inicial" ? undefined : Number(String(tipo).split("_")[1]);
       const c = cuponEjemplo(cfg, Number(body.monto ?? 10000), body.nombre ?? "Dani", dias);
-      const t = textos(c, cfg, tipo);
+      // recomendación de ejemplo: como si hubiera comprado body.comprado (id de producto)
+      let reco: Reco = null;
+      const tn = await TN.para(storeId);
+      const rc = (cfg.recomendaciones ?? {}) as any;
+      const cat = await catalogo(tn, rc).catch(() => []);
+      const comprado = String(body.comprado ?? rc.prioridad?.[0] ?? "");
+      const p = elegirRecomendacion(cat, new Set([comprado]), rc, [comprado]);
+      if (p) {
+        reco = {
+          producto: p, precio_con_saldo: Math.max(0, p.precio - c.monto_cupon),
+          link: `${cfg.url_tienda.replace(/\/$/, "")}/discount/${c.codigo}?redirect_to=${encodeURIComponent(`/productos/${p.handle}/`)}`,
+        };
+      }
+      const t = textos(c, cfg, tipo, reco);
       const v = variables(c, cfg);
       const T = textosEfectivos(cfg.textos);
       const r = (x: string) => plantilla(x, v);
@@ -121,7 +137,8 @@ export async function panel(req: Request, ruta: string): Promise<Response> {
       const v2 = variables(cuponEjemplo(cfg, Number(body.monto ?? 10000), body.nombre ?? "Dani", 2), cfg);
       return json({
         asunto: t.asunto,
-        html: htmlMail(c, cfg, tipo),
+        html: htmlMail(c, cfg, tipo, reco),
+        recomendado: reco ? reco.producto.nombre : null,
         whatsapp: t.whatsapp,
         whatsapp_recordatorio: plantilla(T.whatsapp_recordatorio, v2),
         checkout: {
@@ -129,6 +146,16 @@ export async function panel(req: Request, ruta: string): Promise<Response> {
           boton: r(T.checkout.boton), codigo_linea: r(T.checkout.codigo_linea),
         },
         vence_el: c.vence_el,
+      });
+    }
+
+    if (ruta === "panel-productos") {
+      const { cfg } = await cargarConfig(storeId);
+      const tn = await TN.para(storeId);
+      const cat = await catalogo(tn, (cfg.recomendaciones ?? {}) as any);
+      return json({
+        productos: cat.map((p) => ({ ...p, precio_txt: pesos(p.precio) })),
+        recomendaciones: cfg.recomendaciones ?? {},
       });
     }
 

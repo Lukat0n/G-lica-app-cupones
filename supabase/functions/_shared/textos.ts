@@ -12,6 +12,12 @@
 //   {codigo}      DANI10000K7P
 //   {link}        link que aplica el saldo solo (gelica.com.ar/discount/CODIGO)
 //   {web}         www.gelica.com.ar
+//   {promos_txt}  "Se suma a todas las promos" (vacío si en la config no se suma)
+//   {minimo_txt}  "Sin mínimo de compra" o "Válido en compras desde $X"
+// Solo en el bloque "¿En qué los uso?":
+//   {producto}    nombre del producto recomendado
+//   {queda_en}    "te queda en $38.970" o "te sale gratis"
+// **texto** sale en negrita en los mails.
 
 export type BloqueMail = {
   asunto: string;
@@ -30,7 +36,14 @@ export type Textos = {
   mail_inicial: BloqueMail;
   mail_recordatorio: BloqueMail;         // cuando faltan más de 3 días
   mail_recordatorio_urgente: BloqueMail; // cuando faltan 3 días o menos
-  tip_uso: string;
+  tip_uso: string; // ya no se muestra (reemplazado por "usos"), se deja por compatibilidad
+  usos: {
+    titulo: string;
+    item1: string;
+    item2: string;              // con producto recomendado
+    item2_sin_producto: string; // si no hay nada para recomendar (ya compró todo)
+    item3: string;
+  };
   checkout: {
     etiqueta: string;
     titulo: string;
@@ -42,7 +55,7 @@ export type Textos = {
   whatsapp_recordatorio: string;
 };
 
-const BENEFICIOS = ["Se suma a todas las promos y descuentos", "Se aplica solo al tocar el botón"];
+const BENEFICIOS = ["{promos_txt}", "{minimo_txt}"];
 
 export const TEXTOS_DEFAULT: Textos = {
   mail_inicial: {
@@ -82,6 +95,13 @@ export const TEXTOS_DEFAULT: Textos = {
     codigo_linea: "Código por si lo necesitás: {codigo} · Un solo uso",
   },
   tip_uso: "Guardala en el freezer dentro de una bolsa protectora, así está siempre lista. Para calor: 45 segundos en el microondas.",
+  usos: {
+    titulo: "¿EN QUÉ LOS USO?",
+    item1: "**Sumá otra.** Una en el freezer y otra lista para calor, o una para casa y otra para el trabajo.",
+    item2: "**Probá algo nuevo.** {producto} {queda_en} con tu saldo.",
+    item2_sin_producto: "**Probá algo nuevo.** Mirá toda la línea Frío-Calor en {web}.",
+    item3: "**Hacé un regalo.** A alguien que viva con dolor de espalda, cuello o rodilla.",
+  },
   checkout: {
     etiqueta: "TU SALDO EN GELICA",
     titulo: "Tenés {monto} a favor",

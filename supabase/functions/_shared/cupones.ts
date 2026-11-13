@@ -5,6 +5,7 @@ import {
   telefonoAR,
 } from "./logic.ts";
 import { avisoInicial } from "./avisos.ts";
+import { idsDeOrden } from "./recomendar.ts";
 
 export type Config = {
   store_id: number;
@@ -23,6 +24,7 @@ export type Config = {
   vencimiento_fecha: string | null;
   slot_checkout: string;
   textos: Record<string, unknown>;
+  recomendaciones: Record<string, unknown>;
 };
 
 export async function cargarConfig(storeId: number): Promise<{ cfg: Config; escalas: Escala[] }> {
@@ -87,6 +89,7 @@ export async function crearCuponParaOrden(storeId: number, orderId: number) {
     monto_base: base,
     monto_cupon: escala.monto_cupon,
     compra_minima: escala.compra_minima,
+    productos_comprados: idsDeOrden(order).map(Number),
     ...datosCliente(order),
   }).select("id").single();
 

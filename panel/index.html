@@ -71,6 +71,10 @@
   .oculto{display:none!important}
   .reset{font-size:12px;color:var(--gris);cursor:pointer;text-decoration:underline;margin-left:8px;font-weight:400}
   .tablas td.e{font:600 12px Lexend}
+  .prod{display:flex;gap:10px;align-items:center;min-width:240px}
+  .prod img{width:44px;height:44px;object-fit:cover;border-radius:8px;background:var(--neutro)}
+  .prio{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--borde);border-radius:12px;margin:6px 0;background:#fff}
+  .prio .n{font:700 13px Lexend;color:var(--celeste);width:22px}
   .e-activo{color:var(--celeste)} .e-usado{color:#15803D} .e-vencido{color:var(--gris)} .e-anulado{color:var(--rojo)}
 </style>
 </head>
@@ -95,6 +99,7 @@
     <button data-t="saldo">Saldo y vencimiento</button>
     <button data-t="textos">Mails</button>
     <button data-t="checkout">Página de pedido</button>
+    <button data-t="recos">Recomendaciones</button>
     <button data-t="avisos">Recordatorios y WhatsApp</button>
   </nav>
   <main>
@@ -160,8 +165,9 @@
             </select>
             <div class="vars" id="vars1"></div>
             <div id="camposMail"></div>
-            <label class="campo">TIP DE USO (al pie de todos los mails, vacío = no se muestra) <span class="reset" onclick="resetTxt('tip_uso')">restaurar</span></label>
-            <textarea data-k="tip_uso"></textarea>
+            <h2 style="margin-top:22px">Bloque "¿En qué los uso?"</h2>
+            <p class="ayuda">Va en todos los mails. **texto** sale en negrita. En la idea 2, <code>{producto}</code> y <code>{queda_en}</code> se completan con el producto recomendado (pestaña Recomendaciones). Dejá un campo vacío para ocultarlo.</p>
+            <div id="camposUsos"></div>
           </div>
           <div class="card">
             <h2>Mandame una prueba</h2>
@@ -174,7 +180,9 @@
           <div class="fila"><span class="pill">VISTA PREVIA</span><span class="muted" id="asuntoPrev"></span></div>
           <div class="fila" style="margin:10px 0"><span class="muted">Ejemplo:</span>
             <input type="text" id="prevNombre" value="Dani" style="width:110px">
-            <select id="prevMonto" style="width:120px"></select></div>
+            <select id="prevMonto" style="width:120px"></select>
+            <span class="muted">compró:</span><select id="prevComprado" style="width:190px"></select></div>
+          <div class="muted" id="recoPrev" style="margin-bottom:8px"></div>
           <iframe class="prev" id="iframeMail"></iframe>
         </div>
       </div>
@@ -200,6 +208,20 @@
           <span class="pill">VISTA PREVIA (aproximada)</span>
           <div class="mock" style="margin-top:12px" id="mock"></div>
         </div>
+      </div>
+    </section>
+
+    <!-- RECOMENDACIONES -->
+    <section data-s="recos" class="oculto">
+      <div class="card">
+        <h2>¿Qué producto recomendar en el mail?</h2>
+        <p class="ayuda">Para cada producto, elegí qué sugerir a quien lo compró, en orden de preferencia. La app <b>nunca</b> recomienda algo que esa persona ya compró (en este pedido o en cualquier pedido anterior con el mismo mail), ni productos sin stock o marcados "No recomendar". Si no queda ninguno de la lista, usa el orden general de abajo.</p>
+        <div style="overflow:auto"><table id="tablaRecos"></table></div>
+      </div>
+      <div class="card">
+        <h2>Orden general</h2>
+        <p class="ayuda">Se usa cuando no hay complemento disponible. Arriba = se recomienda primero.</p>
+        <div id="prioridad"></div>
       </div>
     </section>
 
@@ -244,6 +266,7 @@ const CAMPOS_MAIL = [
   ["asunto","ASUNTO"],["etiqueta","ETIQUETA (arriba del título)"],["titulo","TÍTULO"],["bajada","TEXTO"],
   ["caja_label","RECUADRO: ETIQUETA"],["caja_vence","RECUADRO: VENCIMIENTO"],["boton","BOTÓN"],["nota","DEBAJO DEL BOTÓN"],
   ["beneficios","BENEFICIOS CON ✓ (uno por renglón)"],["codigo_linea","LÍNEA DEL CÓDIGO"]];
+const CAMPOS_USOS = [["titulo","TÍTULO DEL BLOQUE"],["item1","IDEA 1"],["item2","IDEA 2 (con producto recomendado)"],["item2_sin_producto","IDEA 2 si ya compró todo"],["item3","IDEA 3"]];
 const CAMPOS_CHECKOUT = [["etiqueta","ETIQUETA"],["titulo","TÍTULO"],["bajada","TEXTO"],["boton","BOTÓN"],["codigo_linea","LÍNEA DEL CÓDIGO"]];
 
 let clave = "";
@@ -284,7 +307,9 @@ async function cargar(){
   draft.textos = JSON.parse(JSON.stringify(datos.textos)); // textos efectivos completos
   escalas = datos.escalas.map(e => ({...e}));
   $("login").classList.add("oculto"); $("app").classList.remove("oculto");
-  pintar(); marcar(false); previewPronto();
+  pintar(); marcar(false);
+  if (!productos.length) await cargarProductos();
+  previewPronto();
 }
 
 function marcar(v){ sucio = v; $("estado").textContent = v ? "Cambios sin guardar" : "Todo guardado"; $("estado").classList.toggle("sucio", v); }
@@ -311,7 +336,8 @@ function pintar(){
   pintarCamposMail();
   $("prevMonto").innerHTML = escalas.map(e => `<option value="${e.monto_cupon}">${pesos(e.monto_cupon)}</option>`).join("");
   if (escalas[1]) $("prevMonto").value = escalas[1].monto_cupon;
-  document.querySelector('textarea[data-k=tip_uso]').value = draft.textos.tip_uso;
+  $("camposUsos").innerHTML = CAMPOS_USOS.map(([k,l]) => campo(`usos.${k}`, l, draft.textos.usos[k])).join("");
+  pintarRecos();
   // checkout
   $("slot").value = draft.slot_checkout;
   $("camposCheckout").innerHTML = CAMPOS_CHECKOUT.map(([k,l]) => campo(`checkout.${k}`, l, draft.textos.checkout[k])).join("");
@@ -325,7 +351,7 @@ function pintar(){
 
 function campo(k, label, valor){
   const v = Array.isArray(valor) ? valor.join("\n") : valor;
-  const largo = /bajada|nota|beneficios/.test(k);
+  const largo = /bajada|nota|beneficios|item/.test(k);
   return `<label class="campo">${label} <span class="reset" onclick="resetTxt('${k}')">restaurar</span></label>` +
     (largo ? `<textarea data-k="${k}">${esc(v)}</textarea>` : `<input type="text" data-k="${k}" value="${esc(v)}">`);
 }
@@ -418,11 +444,13 @@ let tPrev = null, ultimoPrev = null;
 function previewPronto(){ clearTimeout(tPrev); tPrev = setTimeout(preview, 400); }
 $("prevNombre").addEventListener("input", previewPronto);
 $("prevMonto").addEventListener("change", previewPronto);
+$("prevComprado").addEventListener("change", previewPronto);
 async function preview(){
   const sel = $("mailSel").value;
   const tipo = sel === "mail_inicial" ? "inicial" : sel === "mail_recordatorio" ? "recordatorio_7" : "recordatorio_3";
   try {
-    const p = await api("panel-preview", { cfg: draft, tipo, nombre: $("prevNombre").value, monto: Number($("prevMonto").value || 10000) });
+    const p = await api("panel-preview", { cfg: draft, tipo, nombre: $("prevNombre").value, monto: Number($("prevMonto").value || 10000), comprado: $("prevComprado").value || undefined });
+    $("recoPrev").textContent = p.recomendado ? "Le recomendaría: " + p.recomendado : "No hay producto para recomendar (se usa el texto alternativo).";
     ultimoPrev = p;
     $("iframeMail").srcdoc = p.html;
     $("asuntoPrev").textContent = "Asunto: " + p.asunto;
@@ -450,6 +478,51 @@ function pintarMock(){
     s("after_order_summary") +
     `<div class="linea gris">Información del pedido · Comunicate con nosotros</div>`;
 }
+
+// --- recomendaciones
+let productos = [];
+async function cargarProductos(){
+  try {
+    const r = await api("panel-productos");
+    productos = r.productos;
+    pintarRecos();
+  } catch(e) { $("tablaRecos").innerHTML = `<tr><td class="muted">No se pudo leer el catálogo: ${esc(e.message)}</td></tr>`; }
+}
+function rc(){
+  draft.recomendaciones = draft.recomendaciones || {};
+  const r = draft.recomendaciones;
+  r.complementos = r.complementos || {}; r.prioridad = r.prioridad || []; r.excluidos = r.excluidos || []; r.nombres = r.nombres || {};
+  return r;
+}
+function nombreDe(id){ const p = productos.find(x => x.id === id); return p ? (rc().nombres[id] || p.nombre) : "(producto " + id + ")"; }
+function pintarRecos(){
+  if (!productos.length) { $("prevComprado").innerHTML = ""; return; }
+  const r = rc();
+  const opciones = (sel, excepto) => `<option value="">—</option>` + productos.filter(p => p.id !== excepto)
+    .map(p => `<option value="${p.id}" ${p.id === sel ? "selected" : ""}>${esc(nombreDe(p.id))}</option>`).join("");
+  $("tablaRecos").innerHTML = `<thead><tr><th>PRODUCTO</th><th>NOMBRE EN EL MAIL</th><th>A QUIEN LO COMPRÓ, RECOMENDARLE (EN ORDEN)</th><th>NO RECOMENDAR</th></tr></thead><tbody>` +
+    productos.map(p => {
+      const comp = r.complementos[p.id] || [];
+      return `<tr>
+        <td><div class="prod">${p.imagen ? `<img src="${esc(p.imagen)}">` : `<span style="width:44px"></span>`}<div><b>${esc(p.nombre)}</b><div class="muted">${esc(p.precio_txt)}${p.disponible ? "" : " · sin stock"}</div></div></div></td>
+        <td><input type="text" value="${esc(r.nombres[p.id] || "")}" placeholder="${esc(p.nombre)}" onchange="setNombre('${p.id}', this.value)"></td>
+        <td><div class="fila" style="flex-wrap:nowrap">${[0,1,2].map(i => `<select style="width:170px" onchange="setComp('${p.id}',${i},this.value)">${opciones(comp[i] || "", p.id)}</select>`).join("")}</div></td>
+        <td style="text-align:center"><input type="checkbox" ${r.excluidos.includes(p.id) ? "checked" : ""} onchange="setExcl('${p.id}', this.checked)" style="width:18px;height:18px;accent-color:var(--celeste)"></td>
+      </tr>`;
+    }).join("") + "</tbody>";
+  // orden general: los de la lista + los que falten
+  const ids = [...r.prioridad.filter(id => productos.some(p => p.id === id)), ...productos.map(p => p.id).filter(id => !r.prioridad.includes(id))];
+  r.prioridad = ids;
+  $("prioridad").innerHTML = ids.map((id,i) => `<div class="prio"><span class="n">${i+1}</span><span style="flex:1">${esc(nombreDe(id))}${r.excluidos.includes(id) ? ' <span class="muted">(no se recomienda)</span>' : ""}</span>
+      <button class="btn sec chico" ${i===0?"disabled":""} onclick="moverPrio(${i},-1)">↑</button><button class="btn sec chico" ${i===ids.length-1?"disabled":""} onclick="moverPrio(${i},1)">↓</button></div>`).join("");
+  const actual = $("prevComprado").value;
+  $("prevComprado").innerHTML = productos.map(p => `<option value="${p.id}">${esc(nombreDe(p.id))}</option>`).join("");
+  if (actual) $("prevComprado").value = actual;
+}
+function setNombre(id, v){ const r = rc(); if (v.trim()) r.nombres[id] = v.trim(); else delete r.nombres[id]; marcar(true); pintarRecos(); previewPronto(); }
+function setComp(id, i, v){ const r = rc(); const a = (r.complementos[id] || []).slice(0,3); a[i] = v; r.complementos[id] = a.filter(Boolean); marcar(true); pintarRecos(); previewPronto(); }
+function setExcl(id, on){ const r = rc(); r.excluidos = r.excluidos.filter(x => x !== id); if (on) r.excluidos.push(id); marcar(true); pintarRecos(); previewPronto(); }
+function moverPrio(i, d){ const a = rc().prioridad; [a[i], a[i+d]] = [a[i+d], a[i]]; marcar(true); pintarRecos(); }
 
 async function probar(){
   const to = $("pruebaTo").value.trim();

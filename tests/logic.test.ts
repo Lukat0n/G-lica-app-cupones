@@ -1,4 +1,4 @@
-// node --test tests/logic.test.ts   (Node 22+)   ó   deno test tests/
+// deno test -A tests/logic.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -122,4 +122,31 @@ test("plantillas de texto", () => {
   assert.equal(plantilla("{nombre_coma}tenés {monto} en GELICA", v), "Dani, tenés $10.000 en GELICA");
   assert.equal(plantilla("{nombre_coma}tenés {monto} en GELICA", { ...v, nombre: "", nombre_coma: "" }), "Tenés $10.000 en GELICA");
   assert.equal(plantilla("Hola {nombre}, gracias", { nombre: "" }), "Hola, gracias");
+});
+
+import { aProducto, elegirRecomendacion, nombreCorto } from "../supabase/functions/_shared/recomendar.ts";
+test("recomendaciones: nunca algo ya comprado, primero complementos", () => {
+  const mk = (id: string, nombre: string, precio: string, stock: number | null = null) =>
+    aProducto({ id, name: { es: nombre }, handle: { es: id }, published: true,
+      variants: [{ price: precio, promotional_price: null, stock, stock_management: stock !== null }], images: [] });
+  const cat = [
+    mk("ROD", "Rodillera Frío-Calor Gelica | Alivio", "48970"),
+    mk("TOB", "Tobillera Frío-Calor Gelica PRO | Alivio", "42970"),
+    mk("LUM", "Lumbar GELICA Frío-Calor | Alivio", "49970"),
+    mk("CER", "Cervical Frío-Calor Gelica | Alivio", "47900"),
+    mk("MED", "Medias Frio-Calor", "45990", 0),
+  ];
+  const cfg = {
+    complementos: { ROD: ["TOB", "LUM"], LUM: ["CER", "ROD"] },
+    prioridad: ["ROD", "LUM", "CER", "TOB"], excluidos: ["MED"],
+  };
+  assert.equal(nombreCorto("Gorro Gélica 360 PRO | Alivio del Dolor de Cabeza"), "Gorro GELICA 360 PRO");
+  // compró rodillera -> tobillera
+  assert.equal(elegirRecomendacion(cat, new Set(["ROD"]), cfg, ["ROD"])?.id, "TOB");
+  // compró rodillera hoy y tobillera antes -> lumbar
+  assert.equal(elegirRecomendacion(cat, new Set(["ROD", "TOB"]), cfg, ["ROD"])?.id, "LUM");
+  // compró lumbar y ya tiene cervical y rodillera -> cae a prioridad: tobillera
+  assert.equal(elegirRecomendacion(cat, new Set(["LUM", "CER", "ROD"]), cfg, ["LUM"])?.id, "TOB");
+  // ya compró todo lo disponible -> nada (las medias sin stock y excluidas nunca)
+  assert.equal(elegirRecomendacion(cat, new Set(["ROD", "TOB", "LUM", "CER"]), cfg, ["ROD"]), null);
 });

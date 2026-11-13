@@ -1,14 +1,18 @@
 // Mail (cuenta de Google de hola@gelica.com.ar) + WhatsApp (webhook del bot de tu amigo)
-import { db, env } from "./tiendanube.ts";
+import { db, env, TN } from "./tiendanube.ts";
 import { diasEntre, fechaCorta, fechaLarga, hoyAR, pesos } from "./logic.ts";
 import type { Config } from "./cupones.ts";
 import { type BloqueMail, plantilla, textosEfectivos } from "./textos.ts";
+import { catalogo, elegirRecomendacion, type Producto, productosComprados } from "./recomendar.ts";
 
 export type Cupon = {
   id: string; codigo: string; monto_cupon: number; compra_minima: number | null; vence_el: string;
   cliente_nombre: string | null; cliente_email: string | null; cliente_telefono: string | null;
   order_number: number | null;
+  productos_comprados?: (string | number)[] | null;
 };
+
+export type Reco = { producto: Producto; precio_con_saldo: number; link: string } | null;
 
 export type Tipo = "inicial" | `recordatorio_${number}`;
 
@@ -30,10 +34,12 @@ export function variables(c: Cupon, cfg: Config, hoy = hoyAR()): Record<string, 
     codigo: c.codigo,
     link: `${base}/discount/${c.codigo}`,
     web: base.replace(/^https?:\/\//, ""),
+    promos_txt: cfg.combina_con_promos ? "Se suma a todas las promos" : "",
+    minimo_txt: c.compra_minima ? `Válido en compras desde ${pesos(Number(c.compra_minima))}` : "Sin mínimo de compra",
   };
 }
 
-export function textos(c: Cupon, cfg: Config, tipo: Tipo) {
+export function textos(c: Cupon, cfg: Config, tipo: Tipo, reco: Reco = null) {
   const v = variables(c, cfg);
   const T = textosEfectivos((cfg as any).textos);
   const quedan = Number(v.dias);
@@ -53,7 +59,17 @@ export function textos(c: Cupon, cfg: Config, tipo: Tipo) {
     nota: r(bloque.nota),
     beneficios: bloque.beneficios.map(r).filter(Boolean),
     codigo_linea: r(bloque.codigo_linea),
-    tip: r(T.tip_uso),
+    usos: {
+      titulo: r(T.usos.titulo),
+      item1: r(T.usos.item1),
+      item2: reco
+        ? plantilla(T.usos.item2, {
+          ...v, producto: reco.producto.nombre,
+          queda_en: reco.precio_con_saldo > 0 ? `te queda en ${pesos(reco.precio_con_saldo)}` : "te sale gratis",
+        })
+        : r(T.usos.item2_sin_producto),
+      item3: r(T.usos.item3),
+    },
     linkCompartir: `https://wa.me/?text=${encodeURIComponent(msjAmigo)}`,
     whatsapp: r(tipo === "inicial" ? T.whatsapp_inicial : T.whatsapp_recordatorio),
   };
@@ -62,13 +78,67 @@ export function textos(c: Cupon, cfg: Config, tipo: Tipo) {
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+/** **negrita** -> <b> (después de escapar) */
+const md = (s: string) => esc(s).replace(/\*\*(.+?)\*\*/g, "<b style=\"color:#1D2730\">$1</b>");
+
+function bloqueUsos(t: ReturnType<typeof textos>, reco: Reco): string {
+  const u = t.usos;
+  if (!u.titulo && !u.item1 && !u.item2 && !u.item3) return "";
+  const item = (txt: string, extra = "") => !txt ? "" : `
+        <tr><td style="padding:10px 0;border-top:1px solid #E6EBEF;font-size:15px;line-height:1.5;color:${GRIS}">${md(txt)}${extra}</td></tr>`;
+  const card = reco ? `
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:10px;background:#FFFFFF;border:1px solid #E6EBEF;border-radius:12px;width:100%">
+            <tr>
+              ${reco.producto.imagen ? `<td width="84" style="padding:10px"><a href="${esc(reco.link)}"><img src="${esc(reco.producto.imagen)}" width="72" height="72" alt="" style="display:block;width:72px;height:72px;object-fit:cover;border-radius:10px;border:0"></a></td>` : ""}
+              <td style="padding:10px 12px 10px ${reco.producto.imagen ? "0" : "12px"}">
+                <a href="${esc(reco.link)}" style="font-family:${LEXEND};font-weight:600;font-size:14px;color:${TINTA};text-decoration:none">${esc(reco.producto.nombre)}</a>
+                <div style="font-size:13px;margin-top:3px;color:${GRIS}"><span style="text-decoration:line-through">${esc(pesos(reco.producto.precio))}</span>
+                  &nbsp;<b style="font-family:${LEXEND};font-size:16px;color:${CELESTE}">${reco.precio_con_saldo > 0 ? esc(pesos(reco.precio_con_saldo)) : "Gratis"}</b> <span style="font-size:12px">con tu saldo</span></div>
+              </td>
+            </tr>
+          </table>` : "";
+  return `<tr><td style="padding:22px 40px 4px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${NEUTRO};border-radius:16px">
+      <tr><td style="padding:18px 20px 8px">
+        <div style="font-family:${LEXEND};font-weight:700;font-size:12px;letter-spacing:1.5px;color:${CELESTE};margin-bottom:4px">${esc(u.titulo)}</div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${item(u.item1)}${item(u.item2, card)}${item(u.item3)}
+        </table>
+      </td></tr>
+    </table>
+  </td></tr>`;
+}
+
+/** Busca qué producto recomendar a este cliente. Nunca frena el envío si algo falla. */
+export async function recomendacionPara(c: Cupon, cfg: Config): Promise<Reco> {
+  try {
+    const rc = ((cfg as any).recomendaciones ?? {}) as any;
+    const tn = await TN.para(Number(cfg.store_id));
+    const enOrden = (c.productos_comprados ?? []).map(String);
+    const [cat, comprados] = await Promise.all([
+      catalogo(tn, rc),
+      productosComprados(tn, c.cliente_email, enOrden),
+    ]);
+    const p = elegirRecomendacion(cat, comprados, rc, enOrden);
+    if (!p) return null;
+    const base = cfg.url_tienda.replace(/\/$/, "");
+    return {
+      producto: p,
+      precio_con_saldo: Math.max(0, Math.round(p.precio - Number(c.monto_cupon))),
+      link: `${base}/discount/${c.codigo}?redirect_to=${encodeURIComponent(`/productos/${p.handle}/`)}`,
+    };
+  } catch (e) {
+    console.error("recomendacion", c.codigo, e);
+    return null;
+  }
+}
+
 // Paleta GELICA
 const CELESTE = "#3BB3DB", GRIS = "#5B7C8D", NEUTRO = "#F5F7F9", HIELO = "#EAF7FC", TINTA = "#1D2730";
 const LEXEND = "'Lexend',Arial,Helvetica,sans-serif";
 const ZALANDO = "'Zalando Sans',Arial,Helvetica,sans-serif";
 
-export function htmlMail(c: Cupon, cfg: Config, tipo: Tipo): string {
-  const t = textos(c, cfg, tipo);
+export function htmlMail(c: Cupon, cfg: Config, tipo: Tipo, reco: Reco = null): string {
+  const t = textos(c, cfg, tipo, reco);
   const acento = t.urgente ? GRIS : CELESTE; // celeste = buena noticia; gris = lo que se está por perder
   const beneficios = t.beneficios.map((b) => `
         <tr><td style="padding:3px 0;font-size:15px;color:${TINTA}"><span style="color:${CELESTE};font-weight:700;margin-right:8px">&#10003;</span>${esc(b)}</td></tr>`).join("");
@@ -110,19 +180,12 @@ export function htmlMail(c: Cupon, cfg: Config, tipo: Tipo): string {
   ${beneficios ? `<tr><td style="padding:16px 40px 4px"><table role="presentation" cellpadding="0" cellspacing="0" align="center">${beneficios}
   </table></td></tr>` : ""}
 
+  ${bloqueUsos(t, reco)}
+
   <tr><td align="center" style="padding:16px 40px 6px;font-size:13px;color:${GRIS}">${esc(t.codigo_linea)}</td></tr>
   <tr><td align="center" style="padding:4px 40px 24px">
     <a href="${esc(t.linkCompartir)}" style="color:${GRIS};font-size:13px;text-decoration:underline">¿No los vas a usar? Pasáselos a alguien por WhatsApp</a>
   </td></tr>
-
-  ${t.tip ? `<tr><td style="padding:0 40px 28px">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${NEUTRO};border-radius:12px">
-      <tr><td style="padding:18px 20px">
-        <div style="font-family:${LEXEND};font-weight:700;font-size:12px;letter-spacing:1.5px;color:${CELESTE};margin-bottom:6px">TIP DE USO</div>
-        <div style="font-size:14px;line-height:1.5;color:${TINTA}">${esc(t.tip)}</div>
-      </td></tr>
-    </table>
-  </td></tr>` : ""}
 
   <tr><td align="center" style="border-top:1px solid #E6EBEF;padding:20px 24px 26px;font-size:13px;line-height:1.7;color:${GRIS}">
     <a href="mailto:hola@gelica.com.ar" style="color:${GRIS};text-decoration:none">hola@gelica.com.ar</a> · <a href="${esc(cfg.url_tienda)}" style="color:${GRIS};text-decoration:none">${esc(t.v.web)}</a> · <a href="https://www.instagram.com/gelica.ar" style="color:${GRIS};text-decoration:none">@gelica.ar</a>${c.order_number ? `<br>Por tu pedido #${c.order_number}` : ""}
@@ -135,8 +198,9 @@ export function htmlMail(c: Cupon, cfg: Config, tipo: Tipo): string {
 
 export async function enviarMail(c: Cupon, cfg: Config, tipo: Tipo) {
   if (!c.cliente_email) throw new Error("sin email");
-  const t = textos(c, cfg, tipo);
-  const html = htmlMail(c, cfg, tipo);
+  const reco = await recomendacionPara(c, cfg);
+  const t = textos(c, cfg, tipo, reco);
+  const html = htmlMail(c, cfg, tipo, reco);
   if (env("RESEND_API_KEY", true)) {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",

@@ -13,7 +13,7 @@ async function autorizado(req: Request) {
 
 export async function pruebaMail(req: Request): Promise<Response> {
   if (!(await autorizado(req))) return new Response("no", { status: 401 });
-  const { to, tipo = "inicial", nombre = "Dani", monto = 10000 } = await req.json();
+  const { to, tipo = "inicial", nombre = "Dani", monto = 10000, comprados = [] } = await req.json();
   const { data: t } = await db().from("tiendas").select("store_id").limit(1).single();
   const { cfg } = await cargarConfig(Number(t!.store_id));
   const dias = tipo === "inicial" ? cfg.dias_validez : Number(String(tipo).split("_")[1] ?? 7);
@@ -21,7 +21,7 @@ export async function pruebaMail(req: Request): Promise<Response> {
     await enviarMail({
       id: "prueba", codigo: "PRUEBA" + monto, monto_cupon: monto, compra_minima: null,
       vence_el: sumarDias(hoyAR(), dias), cliente_nombre: nombre, cliente_email: to,
-      cliente_telefono: null, order_number: 31007,
+      cliente_telefono: null, order_number: 31007, productos_comprados: comprados,
     }, cfg, tipo);
     return new Response("enviado");
   } catch (e) {
