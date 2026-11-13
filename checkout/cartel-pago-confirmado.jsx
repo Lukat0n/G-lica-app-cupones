@@ -10,18 +10,19 @@ const HIELO = "#EAF7FC";
 const TINTA = "#1D2730";
 
 function Cartel(c) {
+  // Tarjeta compacta: entra en la columna del pedido sin ocupar todo el ancho.
   return (
-    <Box direction="col" width="100%" padding="20px" gap="10px" borderRadius="16px" background={HIELO}
-      style={{ border: `2px solid ${CELESTE}`, marginTop: "12px", marginBottom: "12px" }}>
-      <Text color={CELESTE} style={{ fontSize: "12px", fontWeight: "bold", letterSpacing: "1.5px" }}>{c.etiqueta}</Text>
-      <Text heading={2} color={TINTA}>{c.titulo}</Text>
-      <Text color={GRIS}>{c.bajada}</Text>
+    <Box direction="col" width="100%" padding="16px" gap="8px" borderRadius="14px" background={HIELO}
+      style={{ border: `2px solid ${CELESTE}`, marginTop: "8px", marginBottom: "8px", maxWidth: "560px" }}>
+      <Text color={CELESTE} style={{ fontSize: "11px", fontWeight: "bold", letterSpacing: "1.5px" }}>{c.etiqueta}</Text>
+      <Text color={TINTA} style={{ fontSize: "20px", fontWeight: "bold", lineHeight: "1.2" }}>{c.titulo}</Text>
+      <Text color={GRIS} style={{ fontSize: "14px", lineHeight: "1.4" }}>{c.bajada}</Text>
       <Link href={c.link} variant="primary" style={{ width: "100%", textAlign: "center", borderRadius: "999px" }}>
         {c.boton}
       </Link>
-      <Box direction="row" padding="10px" borderRadius="12px" background="#FFFFFF" alignItems="center"
+      <Box direction="row" padding="8px" borderRadius="10px" background="#FFFFFF" alignItems="center"
         justifyContent="center">
-        <Text showCopyButton color={TINTA} style={{ fontSize: "13px" }}>{c.codigo_linea}</Text>
+        <Text showCopyButton color={TINTA} style={{ fontSize: "12px" }}>{c.codigo_linea}</Text>
       </Box>
     </Box>
   );
